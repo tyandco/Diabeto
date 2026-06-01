@@ -22,11 +22,17 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Diabeto uses your selected photo so the chatbot can give food and health habit advice."
+        }
+      ],
       [
         "expo-splash-screen",
         {

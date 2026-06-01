@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -10,7 +10,9 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
+import { setHealthContext } from '@/lib/health-context';
 
 type FormState = {
   age: string;
@@ -38,7 +40,11 @@ export default function PredictScreen() {
   const [form, setForm] = useState<FormState>(initialForm);
 
   const profile = useMemo(() => parseProfile(form), [form]);
-  const prediction = profile ? predictDiabetesRisk(profile) : null;
+  const prediction = useMemo(() => (profile ? predictDiabetesRisk(profile) : null), [profile]);
+
+  useEffect(() => {
+    setHealthContext(profile && prediction ? { profile, prediction } : null);
+  }, [profile, prediction]);
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -49,7 +55,7 @@ export default function PredictScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <ThemedText type="title">Diabeto</ThemedText>
-          <ThemedText style={styles.subtitle}>
+          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             AI-style diabetes risk prediction and habit advice.
           </ThemedText>
         </View>
@@ -63,24 +69,28 @@ export default function PredictScreen() {
               value={form.age}
               onChangeText={(value) => update('age', value)}
               suffix="years"
+              isDark={isDark}
             />
             <Field
               label="Height"
               value={form.heightCm}
               onChangeText={(value) => update('heightCm', value)}
               suffix="cm"
+              isDark={isDark}
             />
             <Field
               label="Weight"
               value={form.weightKg}
               onChangeText={(value) => update('weightKg', value)}
               suffix="kg"
+              isDark={isDark}
             />
             <Field
               label="Glucose"
               value={form.glucoseMgDl}
               onChangeText={(value) => update('glucoseMgDl', value)}
               suffix="mg/dL"
+              isDark={isDark}
             />
           </View>
 
@@ -93,6 +103,7 @@ export default function PredictScreen() {
             ]}
             value={form.activityLevel}
             onChange={(value) => update('activityLevel', value)}
+            isDark={isDark}
           />
 
           <OptionGroup
@@ -104,13 +115,19 @@ export default function PredictScreen() {
             ]}
             value={form.sugaryDrinks}
             onChange={(value) => update('sugaryDrinks', value)}
+            isDark={isDark}
           />
 
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: form.familyHistory }}
             onPress={() => update('familyHistory', !form.familyHistory)}
-            style={[styles.checkboxRow, form.familyHistory && styles.checkboxRowActive]}>
+            style={[
+              styles.checkboxRow,
+              isDark && styles.checkboxRowDark,
+              form.familyHistory && styles.checkboxRowActive,
+              form.familyHistory && isDark && styles.checkboxRowActiveDark,
+            ]}>
             <View style={[styles.checkbox, form.familyHistory && styles.checkboxActive]}>
               {form.familyHistory ? <ThemedText style={styles.checkmark}>Y</ThemedText> : null}
             </View>
@@ -124,7 +141,9 @@ export default function PredictScreen() {
               <View style={styles.resultTop}>
                 <View>
                   <ThemedText type="subtitle">Prediction</ThemedText>
-                  <ThemedText style={styles.muted}>BMI {prediction.bmi}</ThemedText>
+                  <ThemedText style={[styles.muted, isDark && styles.mutedDark]}>
+                    BMI {prediction.bmi}
+                  </ThemedText>
                 </View>
                 <View style={[styles.scorePill, riskStyle(prediction.riskLevel)]}>
                   <ThemedText style={styles.scoreText}>{prediction.riskLevel}</ThemedText>
@@ -151,7 +170,7 @@ export default function PredictScreen() {
           )}
         </View>
 
-        <ThemedText style={styles.disclaimer}>
+        <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
           This app is for education only and does not diagnose diabetes.
         </ThemedText>
       </ScrollView>
@@ -164,24 +183,27 @@ function Field({
   value,
   onChangeText,
   suffix,
+  isDark,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   suffix: string;
+  isDark: boolean;
 }) {
   return (
     <View style={styles.field}>
       <ThemedText type="defaultSemiBold">{label}</ThemedText>
-      <View style={styles.inputWrap}>
+      <View style={[styles.inputWrap, isDark && styles.inputWrapDark]}>
         <TextInput
           keyboardType="numeric"
           onChangeText={onChangeText}
           placeholder="0"
-          style={styles.input}
+          placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
+          style={[styles.input, isDark && styles.inputDark]}
           value={value}
         />
-        <ThemedText style={styles.suffix}>{suffix}</ThemedText>
+        <ThemedText style={[styles.suffix, isDark && styles.mutedDark]}>{suffix}</ThemedText>
       </View>
     </View>
   );
@@ -192,16 +214,18 @@ function OptionGroup<T extends string>({
   options,
   value,
   onChange,
+  isDark,
 }: {
   label: string;
   options: [T, string][];
   value: T;
   onChange: (value: T) => void;
+  isDark: boolean;
 }) {
   return (
     <View style={styles.optionGroup}>
       <ThemedText type="defaultSemiBold">{label}</ThemedText>
-      <View style={styles.segmented}>
+      <View style={[styles.segmented, isDark && styles.segmentedDark]}>
         {options.map(([optionValue, optionLabel]) => {
           const selected = value === optionValue;
           return (
@@ -209,7 +233,12 @@ function OptionGroup<T extends string>({
               key={optionValue}
               onPress={() => onChange(optionValue)}
               style={[styles.segment, selected && styles.segmentActive]}>
-              <ThemedText style={[styles.segmentText, selected && styles.segmentTextActive]}>
+              <ThemedText
+                style={[
+                  styles.segmentText,
+                  isDark && styles.segmentTextDark,
+                  selected && styles.segmentTextActive,
+                ]}>
                 {optionLabel}
               </ThemedText>
             </Pressable>
@@ -261,19 +290,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subtitle: {
-    color: '#51615c',
+    color: BrandColors.lightMutedText,
   },
   panel: {
-    backgroundColor: '#f7fbf8',
-    borderColor: '#d9e8df',
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     gap: 16,
     padding: 16,
   },
   panelDark: {
-    backgroundColor: '#17201c',
-    borderColor: '#304239',
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
   },
   grid: {
     flexDirection: 'row',
@@ -288,32 +317,45 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: '#c8d8cf',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     minHeight: 48,
     paddingHorizontal: 12,
   },
+  inputWrapDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
   input: {
-    color: '#13231b',
+    color: BrandColors.lightInputText,
     flex: 1,
     fontSize: 17,
     paddingVertical: 10,
   },
+  inputDark: {
+    color: BrandColors.darkInputText,
+  },
   suffix: {
-    color: '#69766f',
+    color: BrandColors.lightMutedText,
     fontSize: 13,
+  },
+  mutedDark: {
+    color: BrandColors.darkMutedText,
   },
   optionGroup: {
     gap: 8,
   },
   segmented: {
-    backgroundColor: '#e8f1ec',
+    backgroundColor: BrandColors.primarySoft,
     borderRadius: 8,
     flexDirection: 'row',
     padding: 4,
+  },
+  segmentedDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
   },
   segment: {
     alignItems: 'center',
@@ -324,12 +366,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   segmentActive: {
-    backgroundColor: '#16724a',
+    backgroundColor: BrandColors.primary,
   },
   segmentText: {
-    color: '#355044',
+    color: BrandColors.lightInputText,
     fontSize: 14,
     textAlign: 'center',
+  },
+  segmentTextDark: {
+    color: BrandColors.darkInputText,
   },
   segmentTextActive: {
     color: '#ffffff',
@@ -337,7 +382,7 @@ const styles = StyleSheet.create({
   },
   checkboxRow: {
     alignItems: 'center',
-    borderColor: '#d4e5da',
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
@@ -345,13 +390,19 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 12,
   },
+  checkboxRowDark: {
+    borderColor: BrandColors.darkBorder,
+  },
   checkboxRowActive: {
-    backgroundColor: '#e7f5ee',
-    borderColor: '#16724a',
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.primary,
+  },
+  checkboxRowActiveDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
   },
   checkbox: {
     alignItems: 'center',
-    borderColor: '#84958d',
+    borderColor: '#7caed3',
     borderRadius: 5,
     borderWidth: 2,
     height: 22,
@@ -359,8 +410,8 @@ const styles = StyleSheet.create({
     width: 22,
   },
   checkboxActive: {
-    backgroundColor: '#16724a',
-    borderColor: '#16724a',
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
   },
   checkmark: {
     color: '#ffffff',
@@ -369,8 +420,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   resultPanel: {
-    backgroundColor: '#ffffff',
-    borderColor: '#d9e8df',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     gap: 14,
@@ -383,7 +434,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   muted: {
-    color: '#66736d',
+    color: BrandColors.lightMutedText,
   },
   scorePill: {
     borderRadius: 999,
@@ -395,22 +446,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   lowRisk: {
-    backgroundColor: '#16724a',
+    backgroundColor: BrandColors.primary,
   },
   moderateRisk: {
-    backgroundColor: '#b46b13',
+    backgroundColor: '#f28c18',
   },
   highRisk: {
-    backgroundColor: '#b3261e',
+    backgroundColor: '#d23b3b',
   },
   scoreTrack: {
-    backgroundColor: '#dfe9e4',
+    backgroundColor: BrandColors.lightSurfaceStrong,
     borderRadius: 999,
     height: 10,
     overflow: 'hidden',
   },
   scoreFill: {
-    backgroundColor: '#16724a',
+    backgroundColor: BrandColors.primary,
     height: '100%',
   },
   adviceList: {
@@ -421,7 +472,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   bullet: {
-    backgroundColor: '#16724a',
+    backgroundColor: BrandColors.primary,
     borderRadius: 4,
     height: 8,
     marginTop: 8,
@@ -431,7 +482,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   disclaimer: {
-    color: '#66736d',
+    color: BrandColors.lightMutedText,
     fontSize: 13,
     lineHeight: 19,
     paddingBottom: 18,

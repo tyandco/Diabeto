@@ -1,7 +1,8 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { BrandColors } from '@/constants/theme';
 
 const mealIdeas = [
   'Breakfast: oats with berries, plain yogurt, and nuts.',
@@ -18,20 +19,22 @@ const habitIdeas = [
 ];
 
 export default function GuideScreen() {
+  const isDark = useColorScheme() === 'dark';
+
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <ThemedText type="title">Guide</ThemedText>
-          <ThemedText style={styles.subtitle}>
+          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             Simple food and lifestyle targets for lowering diabetes risk.
           </ThemedText>
         </View>
 
-        <Section title="What to Eat" items={mealIdeas} />
-        <Section title="What to Do" items={habitIdeas} />
+        <Section title="What to Eat" items={mealIdeas} isDark={isDark} />
+        <Section title="What to Do" items={habitIdeas} isDark={isDark} />
 
-        <View style={styles.infoBox}>
+        <View style={[styles.infoBox, isDark && styles.infoBoxDark]}>
           <ThemedText type="subtitle">About the Model</ThemedText>
           <ThemedText>
             Diabeto uses a lightweight local scoring model based on common risk factors:
@@ -47,9 +50,9 @@ export default function GuideScreen() {
   );
 }
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function Section({ title, items, isDark }: { title: string; items: string[]; isDark: boolean }) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, isDark && styles.sectionDark]}>
       <ThemedText type="subtitle">{title}</ThemedText>
       {items.map((item) => (
         <View key={item} style={styles.row}>
@@ -74,22 +77,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subtitle: {
-    color: '#51615c',
+    color: BrandColors.lightMutedText,
+  },
+  mutedDark: {
+    color: BrandColors.darkMutedText,
   },
   section: {
-    backgroundColor: '#f7fbf8',
-    borderColor: '#d9e8df',
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
     padding: 16,
+  },
+  sectionDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
   },
   row: {
     flexDirection: 'row',
     gap: 10,
   },
   dot: {
-    backgroundColor: '#16724a',
+    backgroundColor: BrandColors.primary,
     borderRadius: 4,
     height: 8,
     marginTop: 8,
@@ -99,11 +109,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoBox: {
-    backgroundColor: '#eef7f2',
-    borderColor: '#c9e0d4',
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     gap: 10,
     padding: 16,
+  },
+  infoBoxDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
   },
 });
