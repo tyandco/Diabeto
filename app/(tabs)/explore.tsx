@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors } from '@/constants/theme';
 
 const mealIdeas = [
@@ -34,7 +35,7 @@ export default function GuideScreen() {
         <Section title="What to Eat" items={mealIdeas} isDark={isDark} />
         <Section title="What to Do" items={habitIdeas} isDark={isDark} />
 
-        <View style={[styles.infoBox, isDark && styles.infoBoxDark]}>
+        <LiquidGlassView isDark={isDark} style={[styles.infoBox, isDark && styles.infoBoxDark]}>
           <ThemedText type="subtitle">About the Model</ThemedText>
           <ThemedText>
             Diabeto uses a lightweight local scoring model based on common risk factors:
@@ -44,7 +45,7 @@ export default function GuideScreen() {
             A future version can connect this screen to a trained Python or cloud AI model after
             you collect a real dataset and decide where predictions should run.
           </ThemedText>
-        </View>
+        </LiquidGlassView>
       </ScrollView>
     </ThemedView>
   );
@@ -52,7 +53,7 @@ export default function GuideScreen() {
 
 function Section({ title, items, isDark }: { title: string; items: string[]; isDark: boolean }) {
   return (
-    <View style={[styles.section, isDark && styles.sectionDark]}>
+    <LiquidGlassView isDark={isDark} style={[styles.section, isDark && styles.sectionDark]}>
       <ThemedText type="subtitle">{title}</ThemedText>
       {items.map((item) => (
         <View key={item} style={styles.row}>
@@ -60,7 +61,7 @@ function Section({ title, items, isDark }: { title: string; items: string[]; isD
           <ThemedText style={styles.rowText}>{item}</ThemedText>
         </View>
       ))}
-    </View>
+    </LiquidGlassView>
   );
 }
 

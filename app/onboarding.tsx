@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } fr
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
@@ -16,6 +17,7 @@ type FormState = {
   activityLevel: DiabetesProfile['activityLevel'];
   sugaryDrinks: DiabetesProfile['sugaryDrinks'];
   canMeasureGlucose: boolean | null;
+  glucoseMgDl: string;
 };
 
 const initialForm: FormState = {
@@ -26,9 +28,10 @@ const initialForm: FormState = {
   activityLevel: 'moderate',
   sugaryDrinks: 'sometimes',
   canMeasureGlucose: null,
+  glucoseMgDl: '',
 };
 
-const pageTitles = ['Welcome', 'Terms', 'Health Details', 'Glucose Access'];
+const pageTitles = ['Welcome', 'Terms', 'Health Details', 'Glucose Access', 'Ribbon'];
 
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
@@ -94,23 +97,24 @@ export default function OnboardingScreen() {
         ) : null}
         {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
         {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
-
-        <View style={styles.actions}>
-          {page > 0 ? (
-            <Pressable onPress={() => setPage((current) => current - 1)} style={styles.secondaryButton}>
-              <ThemedText style={styles.secondaryButtonText}>Back</ThemedText>
-            </Pressable>
-          ) : null}
-          <Pressable
-            disabled={!canContinue}
-            onPress={next}
-            style={[styles.button, !canContinue && styles.buttonDisabled]}>
-            <ThemedText style={styles.buttonText}>
-              {page === pageTitles.length - 1 ? 'Start Diabeto' : 'Continue'}
-            </ThemedText>
-          </Pressable>
-        </View>
+        {page === 4 ? <RibbonPage isDark={isDark} /> : null}
       </ScrollView>
+
+      <LiquidGlassView isDark={isDark} style={[styles.footer, isDark && styles.footerDark]}>
+        {page > 0 ? (
+          <Pressable onPress={() => setPage((current) => current - 1)} style={styles.secondaryButton}>
+            <ThemedText style={styles.secondaryButtonText}>Back</ThemedText>
+          </Pressable>
+        ) : null}
+        <Pressable
+          disabled={!canContinue}
+          onPress={next}
+          style={[styles.button, !canContinue && styles.buttonDisabled]}>
+          <ThemedText style={styles.buttonText}>
+            {page === pageTitles.length - 1 ? 'Start Diabeto' : 'Continue'}
+          </ThemedText>
+        </Pressable>
+      </LiquidGlassView>
     </ThemedView>
   );
 }
@@ -125,14 +129,14 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
         Diabeto
       </ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        A diabetes prevention assistant that estimates risk, gives practical habit advice, and lets Ribbon help with meals and food images.
+        A diabetes prevention assistant that estimates risk and gives practical habit advice from simple health details.
       </ThemedText>
       <InfoCard
         isDark={isDark}
         items={[
           'Quick lifestyle-based risk estimate',
           'Personal advice from your details',
-          'Ribbon can use your data during chat',
+          'Optional AI chat for meals and food images',
         ]}
       />
     </View>
@@ -155,7 +159,7 @@ function TermsPage({
   return (
     <View style={styles.page}>
       <ThemedText type="title">Before You Start</ThemedText>
-      <View style={[styles.panel, isDark && styles.panelDark]}>
+      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="subtitle">Terms of Service</ThemedText>
         <ThemedText>
           Diabeto is for education and prevention support only. It does not diagnose diabetes,
@@ -164,17 +168,17 @@ function TermsPage({
         <ThemedText>
           You are responsible for checking important health decisions with a qualified healthcare professional.
         </ThemedText>
-      </View>
-      <View style={[styles.panel, isDark && styles.panelDark]}>
+      </LiquidGlassView>
+      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="subtitle">Privacy Policy</ThemedText>
         <ThemedText>
-          Diabeto uses the details you enter to estimate risk and personalize Ribbon&apos;s replies.
+          Diabeto uses the details you enter to estimate risk and personalize the AI companion&apos;s replies.
           Chat messages and selected images may be sent to the configured Gemini API.
         </ThemedText>
         <ThemedText>
           Do not upload private medical documents, IDs, or photos you do not want processed by the AI provider.
         </ThemedText>
-      </View>
+      </LiquidGlassView>
       <Checkbox
         checked={acceptedTerms}
         isDark={isDark}
@@ -268,27 +272,61 @@ function GlucosePage({
         onChange={(value) => update('canMeasureGlucose', value)}
         isDark={isDark}
       />
-      <View style={[styles.panel, isDark && styles.panelDark]}>
+      {form.canMeasureGlucose ? (
+        <Field
+          label="Glucose"
+          value={form.glucoseMgDl}
+          onChangeText={(value) => update('glucoseMgDl', value)}
+          suffix="mg/dL"
+          isDark={isDark}
+        />
+      ) : null}
+      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="defaultSemiBold">What this means</ThemedText>
-        <ThemedText>
+        <ThemedText style={styles.helpText}>
           If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history,
           activity, and sugary drink habits. A lab glucose or A1C test can make the picture clearer later.
         </ThemedText>
+      </LiquidGlassView>
+    </View>
+  );
+}
+
+function RibbonPage({ isDark }: { isDark: boolean }) {
+  return (
+    <View style={styles.page}>
+      <View style={styles.logoMark}>
+        <ThemedText style={styles.logoText}>R</ThemedText>
       </View>
+      <ThemedText type="title" style={styles.title}>
+        Meet Ribbon
+      </ThemedText>
+      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+        Ribbon is your Diabeto health companion. She can help you turn your risk estimate into
+        practical meal ideas, food swaps, activity goals, and safer daily habits.
+      </ThemedText>
+      <InfoCard
+        isDark={isDark}
+        items={[
+          'Uses your saved health details when you chat',
+          'Can review food or drink images you attach',
+          'Keeps advice educational, supportive, and practical',
+        ]}
+      />
     </View>
   );
 }
 
 function InfoCard({ isDark, items }: { isDark: boolean; items: string[] }) {
   return (
-    <View style={[styles.panel, isDark && styles.panelDark]}>
+    <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
       {items.map((item) => (
         <View key={item} style={styles.infoRow}>
           <View style={styles.infoDot} />
           <ThemedText style={styles.infoText}>{item}</ThemedText>
         </View>
       ))}
-    </View>
+    </LiquidGlassView>
   );
 }
 
@@ -403,6 +441,7 @@ function parseProfile(form: FormState): DiabetesProfile | null {
   const profile = {
     age: Number(form.age),
     canMeasureGlucose: form.canMeasureGlucose,
+    glucoseMgDl: form.canMeasureGlucose ? Number(form.glucoseMgDl) : undefined,
     heightCm: Number(form.heightCm),
     weightKg: Number(form.weightKg),
     familyHistory: form.familyHistory,
@@ -411,6 +450,11 @@ function parseProfile(form: FormState): DiabetesProfile | null {
   };
 
   const numbers = [profile.age, profile.heightCm, profile.weightKg];
+
+  if (form.canMeasureGlucose) {
+    numbers.push(Number(form.glucoseMgDl));
+  }
+
   const valid = numbers.every((value) => Number.isFinite(value) && value > 0);
   return valid ? profile : null;
 }
@@ -431,7 +475,7 @@ function getCanContinue(
   }
 
   if (page === 3) {
-    return Boolean(profile);
+    return Boolean(form.canMeasureGlucose === false || (form.canMeasureGlucose === true && form.glucoseMgDl));
   }
 
   return true;
@@ -442,10 +486,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flexGrow: 1,
     gap: 22,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 24,
+    paddingBottom: 120,
+    paddingTop: 56,
   },
   page: {
     gap: 18,
@@ -504,6 +549,9 @@ const styles = StyleSheet.create({
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
+  },
+  helpText: {
+    lineHeight: 22,
   },
   infoRow: {
     flexDirection: 'row',
@@ -634,9 +682,18 @@ const styles = StyleSheet.create({
   checkboxText: {
     flex: 1,
   },
-  actions: {
+  footer: {
+    backgroundColor: BrandColors.lightBackground,
+    borderTopColor: BrandColors.lightBorder,
+    borderTopWidth: 1,
     flexDirection: 'row',
     gap: 10,
+    padding: 16,
+    paddingBottom: 24,
+  },
+  footerDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderTopColor: BrandColors.darkBorder,
   },
   button: {
     alignItems: 'center',

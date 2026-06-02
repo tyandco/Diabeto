@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { LiquidGlassView, isLiquidGlassEnabled } from '@/components/ui/liquid-glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,9 +18,13 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         tabBarStyle: {
-          backgroundColor: Colors[colorScheme ?? 'light'].background,
+          backgroundColor: isLiquidGlassEnabled() ? 'transparent' : Colors[colorScheme ?? 'light'].background,
           borderTopColor: isDark ? '#245f90' : '#c8e5fb',
+          position: isLiquidGlassEnabled() ? 'absolute' : undefined,
         },
+        tabBarBackground: () => (
+          <LiquidGlassView isDark={isDark} style={StyleSheet.absoluteFill} />
+        ),
         headerShown: false,
         tabBarButton: HapticTab,
       }}>

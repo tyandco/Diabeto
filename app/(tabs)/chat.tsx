@@ -16,6 +16,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors } from '@/constants/theme';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
@@ -181,8 +182,8 @@ export default function ChatScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-          <ThemedText type="title">Ribbon</ThemedText>
-          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+              <ThemedText type="title">Ribbon</ThemedText>
+              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
                 Your Diabeto health companion.
               </ThemedText>
             </View>
@@ -206,7 +207,11 @@ export default function ChatScreen() {
           {isSending ? <TypingBubble isDark={isDark} /> : null}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPrompts}>
+        <LiquidGlassView isDark={isDark} style={[styles.quickPromptPanel, isDark && styles.quickPromptPanelDark]}>
+          <ThemedText style={[styles.quickPromptLabel, isDark && styles.mutedDark]}>
+            Meal shortcuts
+          </ThemedText>
+          <View style={styles.quickPrompts}>
           {quickPrompts.map((prompt) => (
             <Pressable
               disabled={isSending}
@@ -218,9 +223,10 @@ export default function ChatScreen() {
               </ThemedText>
             </Pressable>
           ))}
-        </ScrollView>
+          </View>
+        </LiquidGlassView>
 
-        <View style={[styles.composer, isDark && styles.composerDark]}>
+        <LiquidGlassView isDark={isDark} interactive style={[styles.composer, isDark && styles.composerDark]}>
           {attachedImage ? (
             <View style={styles.attachmentPreview}>
               <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
@@ -249,7 +255,7 @@ export default function ChatScreen() {
             style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
             <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
           </Pressable>
-        </View>
+        </LiquidGlassView>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -444,15 +450,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   quickPrompts: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+  },
+  quickPromptPanel: {
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+    padding: 10,
+  },
+  quickPromptPanelDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
+  },
+  quickPromptLabel: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
   },
   quickPrompt: {
     backgroundColor: BrandColors.primarySoft,
     borderColor: BrandColors.lightBorder,
     borderRadius: 999,
     borderWidth: 1,
+    minHeight: 36,
+    justifyContent: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   quickPromptDark: {
     backgroundColor: BrandColors.darkSurface,

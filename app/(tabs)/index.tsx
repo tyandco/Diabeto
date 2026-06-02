@@ -10,6 +10,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
@@ -17,6 +18,7 @@ import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/he
 type FormState = {
   age: string;
   canMeasureGlucose: boolean;
+  glucoseMgDl: string;
   heightCm: string;
   weightKg: string;
   familyHistory: boolean;
@@ -27,6 +29,7 @@ type FormState = {
 const initialForm: FormState = {
   age: '32',
   canMeasureGlucose: false,
+  glucoseMgDl: '',
   heightCm: '170',
   weightKg: '74',
   familyHistory: false,
@@ -54,6 +57,8 @@ export default function PredictScreen() {
         setForm({
           age: String(context.profile.age),
           canMeasureGlucose: context.profile.canMeasureGlucose,
+          glucoseMgDl:
+            typeof context.profile.glucoseMgDl === 'number' ? String(context.profile.glucoseMgDl) : '',
           heightCm: String(context.profile.heightCm),
           weightKg: String(context.profile.weightKg),
           familyHistory: context.profile.familyHistory,
@@ -91,7 +96,7 @@ export default function PredictScreen() {
           </ThemedText>
         </View>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
+        <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">Your Details</ThemedText>
 
           <View style={styles.grid}>
@@ -128,6 +133,17 @@ export default function PredictScreen() {
             onChange={(value) => update('canMeasureGlucose', value)}
             isDark={isDark}
           />
+          {form.canMeasureGlucose ? (
+            <View style={styles.grid}>
+            <Field
+              label="Glucose"
+              value={form.glucoseMgDl}
+              onChangeText={(value) => update('glucoseMgDl', value)}
+              suffix="mg/dL"
+              isDark={isDark}
+            />
+            </View>
+          ) : null}
 
           <OptionGroup
             label="Activity"
@@ -168,9 +184,9 @@ export default function PredictScreen() {
             </View>
             <ThemedText type="defaultSemiBold">Family history of diabetes</ThemedText>
           </Pressable>
-        </View>
+        </LiquidGlassView>
 
-        <View style={[styles.resultPanel, isDark && styles.panelDark]}>
+        <LiquidGlassView isDark={isDark} style={[styles.resultPanel, isDark && styles.panelDark]}>
           {prediction ? (
             <>
               <View style={styles.resultTop}>
@@ -203,7 +219,7 @@ export default function PredictScreen() {
           ) : (
             <ThemedText>Enter valid numbers to see your prediction.</ThemedText>
           )}
-        </View>
+        </LiquidGlassView>
 
         <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
           This app is for education only and does not diagnose diabetes.
@@ -288,6 +304,7 @@ function parseProfile(form: FormState): DiabetesProfile | null {
   const profile = {
     age: Number(form.age),
     canMeasureGlucose: form.canMeasureGlucose,
+    glucoseMgDl: form.canMeasureGlucose ? Number(form.glucoseMgDl) : undefined,
     heightCm: Number(form.heightCm),
     weightKg: Number(form.weightKg),
     familyHistory: form.familyHistory,
@@ -296,6 +313,11 @@ function parseProfile(form: FormState): DiabetesProfile | null {
   };
 
   const numbers = [profile.age, profile.heightCm, profile.weightKg];
+
+  if (form.canMeasureGlucose) {
+    numbers.push(Number(form.glucoseMgDl));
+  }
+
   const valid = numbers.every((value) => Number.isFinite(value) && value > 0);
   return valid ? profile : null;
 }
