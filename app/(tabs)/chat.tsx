@@ -13,11 +13,13 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, Fonts } from '@/constants/theme';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
 
@@ -42,6 +44,7 @@ type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'>;
 
 export default function ChatScreen() {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const healthContext = useHealthContext();
   const healthSummary = formatHealthContext(healthContext);
   const scrollRef = useRef<ScrollView>(null);
@@ -200,7 +203,12 @@ export default function ChatScreen() {
           </View>
         </View>
 
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.messages}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.messages,
+            { paddingBottom: Math.max(16, insets.bottom + 8) },
+          ]}>
           {messages.map((message) => (
             <AnimatedMessageBubble key={message.id} isDark={isDark} message={message} />
           ))}
@@ -226,10 +234,21 @@ export default function ChatScreen() {
           </View>
         </LiquidGlassView>
 
-        <LiquidGlassView isDark={isDark} interactive style={[styles.composer, isDark && styles.composerDark]}>
+        <LiquidGlassView
+          isDark={isDark}
+          interactive
+          style={[styles.composer, isDark && styles.composerDark]}>
           {attachedImage ? (
             <View style={styles.attachmentPreview}>
               <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
+              <View style={styles.attachmentText}>
+                <ThemedText style={[styles.attachmentTitle, isDark && styles.contextTextDark]}>
+                  Image attached
+                </ThemedText>
+                <ThemedText style={[styles.attachmentSubtitle, isDark && styles.mutedDark]}>
+                  Ready for Ribbon to review.
+                </ThemedText>
+              </View>
               <Pressable onPress={() => setAttachedImage(null)} style={styles.removeImageButton}>
                 <ThemedText style={styles.removeImageText}>Remove</ThemedText>
               </Pressable>
@@ -240,21 +259,35 @@ export default function ChatScreen() {
             onChangeText={setDraft}
             placeholder="Ask about meals, habits, or an image..."
             placeholderTextColor={isDark ? '#8faec5' : '#7d8b95'}
-            style={[styles.input, isDark && styles.inputDark]}
+            style={[styles.input, attachedImage && styles.inputWithAttachment, isDark && styles.inputDark]}
             value={draft}
           />
-          <Pressable
-            disabled={isSending}
-            onPress={attachImage}
-            style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
-            <ThemedText style={styles.attachText}>Attach</ThemedText>
-          </Pressable>
-          <Pressable
-            disabled={isSending}
-            onPress={() => sendMessage()}
-            style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
-            <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
-          </Pressable>
+          <View style={styles.composerActions}>
+            <Pressable
+              disabled={isSending}
+              onPress={attachImage}
+              style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
+              <IconSymbol
+                color={BrandColors.primary}
+                name="paperclip"
+                size={17}
+                weight="semibold"
+              />
+              <ThemedText style={styles.attachText}>Attach</ThemedText>
+            </Pressable>
+            <Pressable
+              disabled={isSending}
+              onPress={() => sendMessage()}
+              style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
+              <IconSymbol
+                color="#ffffff"
+                name="paperplane.fill"
+                size={17}
+                weight="semibold"
+              />
+              <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
+            </Pressable>
+          </View>
         </LiquidGlassView>
       </KeyboardAvoidingView>
     </ThemedView>
@@ -331,6 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
     padding: 20,
+    paddingBottom: 14,
     paddingTop: 64,
   },
   header: {
@@ -492,46 +526,79 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   composer: {
-    alignItems: 'flex-end',
+    alignItems: 'stretch',
+    backgroundColor: BrandColors.lightSurface,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 18,
     borderWidth: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    padding: 8,
+    flexGrow: 0,
+    flexShrink: 0,
+    gap: 8,
+    maxHeight: 230,
+    padding: 10,
   },
   composerDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
   },
   input: {
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 14,
+    borderWidth: 1,
     color: BrandColors.lightInputText,
-    flex: 1,
+    fontFamily: Fonts?.display,
     fontSize: 16,
+    height: 48,
     maxHeight: 96,
     minHeight: 42,
-    minWidth: 160,
     paddingHorizontal: 8,
     paddingVertical: 8,
+    textAlignVertical: 'top',
+  },
+  inputWithAttachment: {
+    height: 44,
   },
   inputDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
     color: BrandColors.darkInputText,
   },
   attachmentPreview: {
     alignItems: 'center',
-    flexBasis: '100%',
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
+    minHeight: 64,
+    padding: 8,
   },
   previewImage: {
-    borderRadius: 6,
-    height: 54,
-    width: 54,
+    borderRadius: 10,
+    height: 48,
+    width: 48,
+  },
+  attachmentText: {
+    flex: 1,
+    gap: 1,
+    minWidth: 0,
+  },
+  attachmentTitle: {
+    color: BrandColors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  attachmentSubtitle: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    lineHeight: 16,
   },
   removeImageButton: {
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -540,11 +607,19 @@ const styles = StyleSheet.create({
     color: BrandColors.primaryDark,
     fontWeight: '700',
   },
+  composerActions: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    gap: 8,
+  },
   attachButton: {
     alignItems: 'center',
     borderColor: BrandColors.primary,
-    borderRadius: 8,
+    borderRadius: 999,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
     minHeight: 42,
     justifyContent: 'center',
     paddingHorizontal: 12,
@@ -556,7 +631,9 @@ const styles = StyleSheet.create({
   sendButton: {
     alignItems: 'center',
     backgroundColor: BrandColors.primary,
-    borderRadius: 8,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 6,
     minHeight: 42,
     justifyContent: 'center',
     paddingHorizontal: 16,

@@ -11,7 +11,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, Layout } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
 
@@ -341,6 +341,7 @@ const styles = StyleSheet.create({
   content: {
     gap: 18,
     padding: 20,
+    paddingBottom: Layout.tabBarContentInset,
     paddingTop: 64,
   },
   header: {

@@ -1,15 +1,16 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { LiquidGlassView, isLiquidGlassEnabled } from '@/components/ui/liquid-glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { BrandColors, Colors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
 
   return (
@@ -17,14 +18,17 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarHideOnKeyboard: true,
+        tabBarItemStyle: styles.tabItem,
+        tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: {
-          backgroundColor: isLiquidGlassEnabled() ? 'transparent' : Colors[colorScheme ?? 'light'].background,
-          borderTopColor: isDark ? '#245f90' : '#c8e5fb',
-          position: isLiquidGlassEnabled() ? 'absolute' : undefined,
+          backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface,
+          borderTopColor: isDark ? BrandColors.darkBorder : BrandColors.lightBorder,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: Layout.tabBarHeight + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 6),
+          paddingTop: 6,
         },
-        tabBarBackground: () => (
-          <LiquidGlassView isDark={isDark} style={StyleSheet.absoluteFill} />
-        ),
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
@@ -52,3 +56,14 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabItem: {
+    paddingVertical: 2,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+});

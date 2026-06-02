@@ -1,6 +1,16 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  useColorScheme,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -35,10 +45,14 @@ const pageTitles = ['Welcome', 'Terms', 'Health Details', 'Glucose Access', 'Rib
 
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [form, setForm] = useState<FormState>(initialForm);
+  const pageOpacity = useRef(new Animated.Value(1)).current;
+  const pageTranslateX = useRef(new Animated.Value(0)).current;
 
   const profile = useMemo(() => parseProfile(form), [form]);
   const canContinue = getCanContinue(page, acceptedTerms, acceptedPrivacy, form, profile);
@@ -47,12 +61,33 @@ export default function OnboardingScreen() {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
+  useEffect(() => {
+    pageOpacity.setValue(0);
+    pageTranslateX.setValue(18 * direction);
+
+    Animated.parallel([
+      Animated.timing(pageOpacity, {
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pageTranslateX, {
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [direction, page, pageOpacity, pageTranslateX]);
+
   const next = async () => {
     if (!canContinue) {
       return;
     }
 
     if (page < pageTitles.length - 1) {
+      setDirection(1);
       setPage((current) => current + 1);
       return;
     }
@@ -67,6 +102,11 @@ export default function OnboardingScreen() {
     });
 
     router.replace('/(tabs)');
+  };
+
+  const back = () => {
+    setDirection(-1);
+    setPage((current) => Math.max(0, current - 1));
   };
 
   return (
@@ -85,24 +125,40 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {page === 0 ? <WelcomePage isDark={isDark} /> : null}
-        {page === 1 ? (
-          <TermsPage
-            acceptedPrivacy={acceptedPrivacy}
-            acceptedTerms={acceptedTerms}
-            isDark={isDark}
-            setAcceptedPrivacy={setAcceptedPrivacy}
-            setAcceptedTerms={setAcceptedTerms}
-          />
-        ) : null}
-        {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
-        {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
-        {page === 4 ? <RibbonPage isDark={isDark} /> : null}
+        <Animated.View
+          key={page}
+          style={[
+            styles.pageTransition,
+            {
+              opacity: pageOpacity,
+              transform: [{ translateX: pageTranslateX }],
+            },
+          ]}>
+          {page === 0 ? <WelcomePage isDark={isDark} /> : null}
+          {page === 1 ? (
+            <TermsPage
+              acceptedPrivacy={acceptedPrivacy}
+              acceptedTerms={acceptedTerms}
+              isDark={isDark}
+              setAcceptedPrivacy={setAcceptedPrivacy}
+              setAcceptedTerms={setAcceptedTerms}
+            />
+          ) : null}
+          {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
+          {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
+          {page === 4 ? <RibbonPage isDark={isDark} /> : null}
+        </Animated.View>
       </ScrollView>
 
-      <LiquidGlassView isDark={isDark} style={[styles.footer, isDark && styles.footerDark]}>
+      <LiquidGlassView
+        isDark={isDark}
+        style={[
+          styles.footer,
+          isDark && styles.footerDark,
+          { paddingBottom: Math.max(insets.bottom, 14) },
+        ]}>
         {page > 0 ? (
-          <Pressable onPress={() => setPage((current) => current - 1)} style={styles.secondaryButton}>
+          <Pressable onPress={back} style={styles.secondaryButton}>
             <ThemedText style={styles.secondaryButtonText}>Back</ThemedText>
           </Pressable>
         ) : null}
@@ -489,22 +545,25 @@ const styles = StyleSheet.create({
     gap: 22,
     justifyContent: 'flex-start',
     padding: 24,
-    paddingBottom: 120,
+    paddingBottom: 132,
     paddingTop: 56,
   },
+  pageTransition: {
+    flex: 1,
+  },
   page: {
-    gap: 18,
+    gap: 20,
   },
   progressRow: {
     alignSelf: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
   },
   progressDot: {
-    backgroundColor: BrandColors.lightBorder,
+    backgroundColor: '#d9e5e2',
     borderRadius: 999,
-    height: 8,
-    width: 34,
+    height: 7,
+    width: 32,
   },
   progressDotActive: {
     backgroundColor: BrandColors.primary,
@@ -515,11 +574,17 @@ const styles = StyleSheet.create({
   logoMark: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: BrandColors.primary,
-    borderRadius: 24,
-    height: 88,
+    backgroundColor: BrandColors.primaryDark,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 28,
+    borderWidth: 1,
+    height: 92,
     justifyContent: 'center',
-    width: 88,
+    shadowColor: BrandColors.primaryDark,
+    shadowOffset: { height: 14, width: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    width: 92,
   },
   logoText: {
     color: '#ffffff',
@@ -533,7 +598,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: BrandColors.lightMutedText,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 23,
   },
   mutedDark: {
     color: BrandColors.darkMutedText,
@@ -543,8 +609,12 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 10,
+    gap: 12,
     padding: 16,
+    shadowColor: '#173532',
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -580,12 +650,12 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     alignItems: 'center',
-    backgroundColor: BrandColors.lightBackground,
+    backgroundColor: '#fbfdfc',
     borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 48,
+    minHeight: 50,
     paddingHorizontal: 12,
   },
   inputWrapDark: {
@@ -612,7 +682,8 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.primarySoft,
     borderRadius: 8,
     flexDirection: 'row',
-    padding: 4,
+    gap: 4,
+    padding: 5,
   },
   segmentedDark: {
     backgroundColor: BrandColors.darkSurfaceStrong,
@@ -621,12 +692,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 6,
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   segmentActive: {
     backgroundColor: BrandColors.primary,
+    shadowColor: BrandColors.primaryDark,
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
   },
   segmentText: {
     color: BrandColors.lightInputText,
@@ -646,9 +721,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 10,
-    minHeight: 48,
-    paddingHorizontal: 12,
+    gap: 12,
+    minHeight: 52,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   checkboxRowDark: {
     borderColor: BrandColors.darkBorder,
@@ -662,7 +738,7 @@ const styles = StyleSheet.create({
   },
   checkbox: {
     alignItems: 'center',
-    borderColor: '#7caed3',
+    borderColor: '#8dafaa',
     borderRadius: 5,
     borderWidth: 2,
     height: 22,
@@ -683,16 +759,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    backgroundColor: BrandColors.lightBackground,
-    borderTopColor: BrandColors.lightBorder,
-    borderTopWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderColor: BrandColors.lightBorder,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 10,
-    padding: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   footerDark: {
-    backgroundColor: BrandColors.darkBackground,
+    backgroundColor: 'rgba(7, 19, 31, 0.88)',
     borderTopColor: BrandColors.darkBorder,
   },
   button: {
@@ -700,10 +776,14 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.primary,
     borderRadius: 8,
     flex: 1,
-    minHeight: 52,
+    minHeight: 54,
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
+    shadowColor: BrandColors.primaryDark,
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -718,7 +798,7 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
-    minHeight: 52,
+    minHeight: 54,
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,

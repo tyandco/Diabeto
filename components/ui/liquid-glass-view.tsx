@@ -1,8 +1,5 @@
-import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { PropsWithChildren } from 'react';
-import { Platform, StyleSheet, View, type ViewProps } from 'react-native';
-
-import { BrandColors } from '@/constants/theme';
+import { View, type ViewProps } from 'react-native';
 
 type LiquidGlassViewProps = PropsWithChildren<
   ViewProps & {
@@ -11,50 +8,18 @@ type LiquidGlassViewProps = PropsWithChildren<
   }
 >;
 
-const canUseLiquidGlass =
-  Platform.OS === 'ios' && isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-
 export function LiquidGlassView({
   children,
-  isDark = false,
-  interactive = false,
   style,
   ...props
 }: LiquidGlassViewProps) {
-  if (!canUseLiquidGlass) {
-    return (
-      <View style={style} {...props}>
-        {children}
-      </View>
-    );
-  }
-
   return (
-    <View style={[style, styles.glassHost, isDark ? styles.glassHostDark : styles.glassHostLight]} {...props}>
-      <GlassView
-        colorScheme={isDark ? 'dark' : 'light'}
-        glassEffectStyle="regular"
-        isInteractive={interactive}
-        style={StyleSheet.absoluteFill}
-        tintColor={isDark ? BrandColors.primaryDark : BrandColors.primary}
-      />
+    <View style={style} {...props}>
       {children}
     </View>
   );
 }
 
 export function isLiquidGlassEnabled() {
-  return canUseLiquidGlass;
+  return false;
 }
-
-const styles = StyleSheet.create({
-  glassHost: {
-    overflow: 'hidden',
-  },
-  glassHostLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  glassHostDark: {
-    backgroundColor: 'rgba(7, 19, 31, 0.24)',
-  },
-});

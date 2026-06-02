@@ -9,8 +9,9 @@ export const BrandColors = {
   primary: '#1894f2',
   primaryDark: '#0b67b3',
   primarySoft: '#e8f4ff',
-  lightBackground: '#ffffff',
-  lightSurface: '#f7fbff',
+  accent: '#f2a64b',
+  lightBackground: '#f6faff',
+  lightSurface: '#ffffff',
   lightSurfaceStrong: '#e8f4ff',
   lightBorder: '#c8e5fb',
   lightMutedText: '#51616f',
@@ -28,7 +29,7 @@ const tintColorDark = BrandColors.primary;
 
 export const Colors = {
   light: {
-    text: '#11181C',
+    text: BrandColors.lightInputText,
     background: BrandColors.lightBackground,
     tint: tintColorLight,
     icon: '#687076',
@@ -45,8 +46,15 @@ export const Colors = {
   },
 };
 
+export const Layout = {
+  tabBarHeight: 58,
+  tabBarBottomOffset: 0,
+  tabBarContentInset: 28,
+};
+
 export const Fonts = Platform.select({
   ios: {
+    display: 'SF Pro Display',
     /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
     /** iOS `UIFontDescriptorSystemDesignSerif` */
@@ -57,12 +65,14 @@ export const Fonts = Platform.select({
     mono: 'ui-monospace',
   },
   default: {
+    display: 'Inter',
     sans: 'normal',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
+    display: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, Layout } from '@/constants/theme';
 
 const mealIdeas = [
   'Breakfast: oats with berries, plain yogurt, and nuts.',
@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
   content: {
     gap: 18,
     padding: 20,
+    paddingBottom: Layout.tabBarContentInset,
     paddingTop: 64,
   },
   header: {
