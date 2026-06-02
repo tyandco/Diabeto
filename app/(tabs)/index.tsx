@@ -12,13 +12,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
-import { setHealthContext } from '@/lib/health-context';
+import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
 
 type FormState = {
   age: string;
+  canMeasureGlucose: boolean;
   heightCm: string;
   weightKg: string;
-  glucoseMgDl: string;
   familyHistory: boolean;
   activityLevel: DiabetesProfile['activityLevel'];
   sugaryDrinks: DiabetesProfile['sugaryDrinks'];
@@ -26,9 +26,9 @@ type FormState = {
 
 const initialForm: FormState = {
   age: '32',
+  canMeasureGlucose: false,
   heightCm: '170',
   weightKg: '74',
-  glucoseMgDl: '96',
   familyHistory: false,
   activityLevel: 'moderate',
   sugaryDrinks: 'sometimes',
@@ -38,13 +38,44 @@ export default function PredictScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [form, setForm] = useState<FormState>(initialForm);
+  const [hasLoadedSavedProfile, setHasLoadedSavedProfile] = useState(false);
 
   const profile = useMemo(() => parseProfile(form), [form]);
   const prediction = useMemo(() => (profile ? predictDiabetesRisk(profile) : null), [profile]);
 
   useEffect(() => {
+    loadHealthContext()
+      .then((context) => {
+        if (!context) {
+          setHasLoadedSavedProfile(true);
+          return;
+        }
+
+        setForm({
+          age: String(context.profile.age),
+          canMeasureGlucose: context.profile.canMeasureGlucose,
+          heightCm: String(context.profile.heightCm),
+          weightKg: String(context.profile.weightKg),
+          familyHistory: context.profile.familyHistory,
+          activityLevel: context.profile.activityLevel,
+          sugaryDrinks: context.profile.sugaryDrinks,
+        });
+        setHasLoadedSavedProfile(true);
+      })
+      .catch(() => setHasLoadedSavedProfile(true));
+  }, []);
+
+  useEffect(() => {
     setHealthContext(profile && prediction ? { profile, prediction } : null);
   }, [profile, prediction]);
+
+  useEffect(() => {
+    if (!hasLoadedSavedProfile || !profile || !prediction) {
+      return;
+    }
+
+    saveHealthContext({ profile, prediction }).catch(() => undefined);
+  }, [hasLoadedSavedProfile, profile, prediction]);
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -85,14 +116,18 @@ export default function PredictScreen() {
               suffix="kg"
               isDark={isDark}
             />
-            <Field
-              label="Glucose"
-              value={form.glucoseMgDl}
-              onChangeText={(value) => update('glucoseMgDl', value)}
-              suffix="mg/dL"
-              isDark={isDark}
-            />
           </View>
+
+          <OptionGroup
+            label="Can measure glucose now?"
+            options={[
+              [true, 'Yes'],
+              [false, 'No'],
+            ]}
+            value={form.canMeasureGlucose}
+            onChange={(value) => update('canMeasureGlucose', value)}
+            isDark={isDark}
+          />
 
           <OptionGroup
             label="Activity"
@@ -209,7 +244,7 @@ function Field({
   );
 }
 
-function OptionGroup<T extends string>({
+function OptionGroup<T extends string | boolean>({
   label,
   options,
   value,
@@ -230,7 +265,7 @@ function OptionGroup<T extends string>({
           const selected = value === optionValue;
           return (
             <Pressable
-              key={optionValue}
+              key={String(optionValue)}
               onPress={() => onChange(optionValue)}
               style={[styles.segment, selected && styles.segmentActive]}>
               <ThemedText
@@ -252,15 +287,15 @@ function OptionGroup<T extends string>({
 function parseProfile(form: FormState): DiabetesProfile | null {
   const profile = {
     age: Number(form.age),
+    canMeasureGlucose: form.canMeasureGlucose,
     heightCm: Number(form.heightCm),
     weightKg: Number(form.weightKg),
-    glucoseMgDl: Number(form.glucoseMgDl),
     familyHistory: form.familyHistory,
     activityLevel: form.activityLevel,
     sugaryDrinks: form.sugaryDrinks,
   };
 
-  const numbers = [profile.age, profile.heightCm, profile.weightKg, profile.glucoseMgDl];
+  const numbers = [profile.age, profile.heightCm, profile.weightKg];
   const valid = numbers.every((value) => Number.isFinite(value) && value > 0);
   return valid ? profile : null;
 }

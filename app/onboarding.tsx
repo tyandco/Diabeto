@@ -1,56 +1,440 @@
-import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors } from '@/constants/theme';
+import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
+import { saveHealthContext } from '@/lib/health-context';
 
-const features = [
-  'Estimate your diabetes risk from simple health details.',
-  'Get food and activity advice based on your result.',
-  'Ask DiabetoBot quick questions about healthier habits.',
-];
+type FormState = {
+  age: string;
+  heightCm: string;
+  weightKg: string;
+  familyHistory: boolean;
+  activityLevel: DiabetesProfile['activityLevel'];
+  sugaryDrinks: DiabetesProfile['sugaryDrinks'];
+  canMeasureGlucose: boolean | null;
+};
+
+const initialForm: FormState = {
+  age: '',
+  heightCm: '',
+  weightKg: '',
+  familyHistory: false,
+  activityLevel: 'moderate',
+  sugaryDrinks: 'sometimes',
+  canMeasureGlucose: null,
+};
+
+const pageTitles = ['Welcome', 'Terms', 'Health Details', 'Glucose Access'];
 
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
+  const [page, setPage] = useState(0);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [form, setForm] = useState<FormState>(initialForm);
+
+  const profile = useMemo(() => parseProfile(form), [form]);
+  const canContinue = getCanContinue(page, acceptedTerms, acceptedPrivacy, form, profile);
+
+  const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const next = async () => {
+    if (!canContinue) {
+      return;
+    }
+
+    if (page < pageTitles.length - 1) {
+      setPage((current) => current + 1);
+      return;
+    }
+
+    if (!profile) {
+      return;
+    }
+
+    await saveHealthContext({
+      profile,
+      prediction: predictDiabetesRisk(profile),
+    });
+
+    router.replace('/(tabs)');
+  };
 
   return (
     <ThemedView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.logoMark}>
-          <ThemedText style={styles.logoText}>D</ThemedText>
-        </View>
-
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            Diabeto
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            A simple diabetes prediction and prevention assistant for everyday choices.
-          </ThemedText>
-        </View>
-
-        <View style={styles.featureList}>
-          {features.map((feature, index) => (
-            <View key={feature} style={[styles.featureRow, isDark && styles.featureRowDark]}>
-              <View style={styles.featureNumber}>
-                <ThemedText style={styles.featureNumberText}>{index + 1}</ThemedText>
-              </View>
-              <ThemedText style={styles.featureText}>{feature}</ThemedText>
-            </View>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.progressRow}>
+          {pageTitles.map((title, index) => (
+            <View
+              key={title}
+              style={[
+                styles.progressDot,
+                index <= page && styles.progressDotActive,
+                isDark && styles.progressDotDark,
+              ]}
+            />
           ))}
         </View>
 
-        <Link href="/(tabs)" style={styles.button}>
-          <ThemedText style={styles.buttonText}>Get Started</ThemedText>
-        </Link>
+        {page === 0 ? <WelcomePage isDark={isDark} /> : null}
+        {page === 1 ? (
+          <TermsPage
+            acceptedPrivacy={acceptedPrivacy}
+            acceptedTerms={acceptedTerms}
+            isDark={isDark}
+            setAcceptedPrivacy={setAcceptedPrivacy}
+            setAcceptedTerms={setAcceptedTerms}
+          />
+        ) : null}
+        {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
+        {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
 
-        <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
-          Diabeto is educational and should not replace professional medical care.
-        </ThemedText>
+        <View style={styles.actions}>
+          {page > 0 ? (
+            <Pressable onPress={() => setPage((current) => current - 1)} style={styles.secondaryButton}>
+              <ThemedText style={styles.secondaryButtonText}>Back</ThemedText>
+            </Pressable>
+          ) : null}
+          <Pressable
+            disabled={!canContinue}
+            onPress={next}
+            style={[styles.button, !canContinue && styles.buttonDisabled]}>
+            <ThemedText style={styles.buttonText}>
+              {page === pageTitles.length - 1 ? 'Start Diabeto' : 'Continue'}
+            </ThemedText>
+          </Pressable>
+        </View>
       </ScrollView>
     </ThemedView>
   );
+}
+
+function WelcomePage({ isDark }: { isDark: boolean }) {
+  return (
+    <View style={styles.page}>
+      <View style={styles.logoMark}>
+        <ThemedText style={styles.logoText}>D</ThemedText>
+      </View>
+      <ThemedText type="title" style={styles.title}>
+        Diabeto
+      </ThemedText>
+      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+        A diabetes prevention assistant that estimates risk, gives practical habit advice, and lets Ribbon help with meals and food images.
+      </ThemedText>
+      <InfoCard
+        isDark={isDark}
+        items={[
+          'Quick lifestyle-based risk estimate',
+          'Personal advice from your details',
+          'Ribbon can use your data during chat',
+        ]}
+      />
+    </View>
+  );
+}
+
+function TermsPage({
+  acceptedPrivacy,
+  acceptedTerms,
+  isDark,
+  setAcceptedPrivacy,
+  setAcceptedTerms,
+}: {
+  acceptedPrivacy: boolean;
+  acceptedTerms: boolean;
+  isDark: boolean;
+  setAcceptedPrivacy: (value: boolean) => void;
+  setAcceptedTerms: (value: boolean) => void;
+}) {
+  return (
+    <View style={styles.page}>
+      <ThemedText type="title">Before You Start</ThemedText>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
+        <ThemedText type="subtitle">Terms of Service</ThemedText>
+        <ThemedText>
+          Diabeto is for education and prevention support only. It does not diagnose diabetes,
+          replace a doctor, or provide emergency care.
+        </ThemedText>
+        <ThemedText>
+          You are responsible for checking important health decisions with a qualified healthcare professional.
+        </ThemedText>
+      </View>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
+        <ThemedText type="subtitle">Privacy Policy</ThemedText>
+        <ThemedText>
+          Diabeto uses the details you enter to estimate risk and personalize Ribbon&apos;s replies.
+          Chat messages and selected images may be sent to the configured Gemini API.
+        </ThemedText>
+        <ThemedText>
+          Do not upload private medical documents, IDs, or photos you do not want processed by the AI provider.
+        </ThemedText>
+      </View>
+      <Checkbox
+        checked={acceptedTerms}
+        isDark={isDark}
+        label="I agree to the Terms of Service"
+        onPress={() => setAcceptedTerms(!acceptedTerms)}
+      />
+      <Checkbox
+        checked={acceptedPrivacy}
+        isDark={isDark}
+        label="I understand the Privacy Policy"
+        onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+      />
+    </View>
+  );
+}
+
+function HealthPage({
+  form,
+  isDark,
+  update,
+}: {
+  form: FormState;
+  isDark: boolean;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+}) {
+  return (
+    <View style={styles.page}>
+      <ThemedText type="title">Your Details</ThemedText>
+      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+        These details help Diabeto make a first estimate. You can adjust them later.
+      </ThemedText>
+      <View style={styles.grid}>
+        <Field label="Age" value={form.age} onChangeText={(value) => update('age', value)} suffix="years" isDark={isDark} />
+        <Field label="Height" value={form.heightCm} onChangeText={(value) => update('heightCm', value)} suffix="cm" isDark={isDark} />
+        <Field label="Weight" value={form.weightKg} onChangeText={(value) => update('weightKg', value)} suffix="kg" isDark={isDark} />
+      </View>
+      <OptionGroup
+        label="Activity"
+        options={[
+          ['low', 'Low'],
+          ['moderate', 'Moderate'],
+          ['high', 'High'],
+        ]}
+        value={form.activityLevel}
+        onChange={(value) => update('activityLevel', value)}
+        isDark={isDark}
+      />
+      <OptionGroup
+        label="Sugary drinks"
+        options={[
+          ['rarely', 'Rarely'],
+          ['sometimes', 'Sometimes'],
+          ['often', 'Often'],
+        ]}
+        value={form.sugaryDrinks}
+        onChange={(value) => update('sugaryDrinks', value)}
+        isDark={isDark}
+      />
+      <Checkbox
+        checked={form.familyHistory}
+        isDark={isDark}
+        label="Family history of diabetes"
+        onPress={() => update('familyHistory', !form.familyHistory)}
+      />
+    </View>
+  );
+}
+
+function GlucosePage({
+  form,
+  isDark,
+  update,
+}: {
+  form: FormState;
+  isDark: boolean;
+  update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
+}) {
+  return (
+    <View style={styles.page}>
+      <ThemedText type="title">Glucose Access</ThemedText>
+      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+        Not everyone can measure blood glucose at home. Diabeto will not require a glucose value.
+      </ThemedText>
+      <OptionGroup
+        label="Are you able to measure your blood glucose right now?"
+        options={[
+          [true, 'Yes'],
+          [false, 'No'],
+        ]}
+        value={form.canMeasureGlucose}
+        onChange={(value) => update('canMeasureGlucose', value)}
+        isDark={isDark}
+      />
+      <View style={[styles.panel, isDark && styles.panelDark]}>
+        <ThemedText type="defaultSemiBold">What this means</ThemedText>
+        <ThemedText>
+          If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history,
+          activity, and sugary drink habits. A lab glucose or A1C test can make the picture clearer later.
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function InfoCard({ isDark, items }: { isDark: boolean; items: string[] }) {
+  return (
+    <View style={[styles.panel, isDark && styles.panelDark]}>
+      {items.map((item) => (
+        <View key={item} style={styles.infoRow}>
+          <View style={styles.infoDot} />
+          <ThemedText style={styles.infoText}>{item}</ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  suffix,
+  isDark,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  suffix: string;
+  isDark: boolean;
+}) {
+  return (
+    <View style={styles.field}>
+      <ThemedText type="defaultSemiBold">{label}</ThemedText>
+      <View style={[styles.inputWrap, isDark && styles.inputWrapDark]}>
+        <TextInput
+          keyboardType="numeric"
+          onChangeText={onChangeText}
+          placeholder="0"
+          placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
+          style={[styles.input, isDark && styles.inputDark]}
+          value={value}
+        />
+        <ThemedText style={[styles.suffix, isDark && styles.mutedDark]}>{suffix}</ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function OptionGroup<T extends string | boolean | null>({
+  label,
+  options,
+  value,
+  onChange,
+  isDark,
+}: {
+  label: string;
+  options: [T, string][];
+  value: T;
+  onChange: (value: T) => void;
+  isDark: boolean;
+}) {
+  return (
+    <View style={styles.optionGroup}>
+      <ThemedText type="defaultSemiBold">{label}</ThemedText>
+      <View style={[styles.segmented, isDark && styles.segmentedDark]}>
+        {options.map(([optionValue, optionLabel]) => {
+          const selected = value === optionValue;
+          return (
+            <Pressable
+              key={String(optionValue)}
+              onPress={() => onChange(optionValue)}
+              style={[styles.segment, selected && styles.segmentActive]}>
+              <ThemedText
+                style={[
+                  styles.segmentText,
+                  isDark && styles.segmentTextDark,
+                  selected && styles.segmentTextActive,
+                ]}>
+                {optionLabel}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function Checkbox({
+  checked,
+  isDark,
+  label,
+  onPress,
+}: {
+  checked: boolean;
+  isDark: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      onPress={onPress}
+      style={[
+        styles.checkboxRow,
+        isDark && styles.checkboxRowDark,
+        checked && styles.checkboxRowActive,
+        checked && isDark && styles.checkboxRowActiveDark,
+      ]}>
+      <View style={[styles.checkbox, checked && styles.checkboxActive]}>
+        {checked ? <ThemedText style={styles.checkmark}>Y</ThemedText> : null}
+      </View>
+      <ThemedText type="defaultSemiBold" style={styles.checkboxText}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+function parseProfile(form: FormState): DiabetesProfile | null {
+  if (form.canMeasureGlucose === null) {
+    return null;
+  }
+
+  const profile = {
+    age: Number(form.age),
+    canMeasureGlucose: form.canMeasureGlucose,
+    heightCm: Number(form.heightCm),
+    weightKg: Number(form.weightKg),
+    familyHistory: form.familyHistory,
+    activityLevel: form.activityLevel,
+    sugaryDrinks: form.sugaryDrinks,
+  };
+
+  const numbers = [profile.age, profile.heightCm, profile.weightKg];
+  const valid = numbers.every((value) => Number.isFinite(value) && value > 0);
+  return valid ? profile : null;
+}
+
+function getCanContinue(
+  page: number,
+  acceptedTerms: boolean,
+  acceptedPrivacy: boolean,
+  form: FormState,
+  profile: DiabetesProfile | null
+) {
+  if (page === 1) {
+    return acceptedTerms && acceptedPrivacy;
+  }
+
+  if (page === 2) {
+    return Boolean(form.age && form.heightCm && form.weightKg);
+  }
+
+  if (page === 3) {
+    return Boolean(profile);
+  }
+
+  return true;
 }
 
 const styles = StyleSheet.create({
@@ -59,9 +443,29 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    gap: 28,
+    gap: 22,
     justifyContent: 'center',
     padding: 24,
+  },
+  page: {
+    gap: 18,
+  },
+  progressRow: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  progressDot: {
+    backgroundColor: BrandColors.lightBorder,
+    borderRadius: 999,
+    height: 8,
+    width: 34,
+  },
+  progressDotActive: {
+    backgroundColor: BrandColors.primary,
+  },
+  progressDotDark: {
+    backgroundColor: BrandColors.darkBorder,
   },
   logoMark: {
     alignItems: 'center',
@@ -78,72 +482,192 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 48,
   },
-  header: {
-    alignItems: 'center',
-    gap: 10,
-  },
   title: {
     color: BrandColors.primary,
+    textAlign: 'center',
   },
   subtitle: {
     color: BrandColors.lightMutedText,
-    maxWidth: 360,
-    textAlign: 'center',
+    lineHeight: 22,
   },
   mutedDark: {
     color: BrandColors.darkMutedText,
   },
-  featureList: {
+  panel: {
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  panelDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  infoDot: {
+    backgroundColor: BrandColors.primary,
+    borderRadius: 4,
+    height: 8,
+    marginTop: 8,
+    width: 8,
+  },
+  infoText: {
+    flex: 1,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
-  featureRow: {
+  field: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    gap: 6,
+    minWidth: 135,
+  },
+  inputWrap: {
     alignItems: 'center',
-    backgroundColor: BrandColors.primarySoft,
+    backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 12,
-    padding: 14,
+    minHeight: 48,
+    paddingHorizontal: 12,
   },
-  featureRowDark: {
-    backgroundColor: BrandColors.darkSurface,
+  inputWrapDark: {
+    backgroundColor: BrandColors.darkBackground,
     borderColor: BrandColors.darkBorder,
   },
-  featureNumber: {
-    alignItems: 'center',
-    backgroundColor: BrandColors.primary,
-    borderRadius: 16,
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
-  },
-  featureNumberText: {
-    color: '#ffffff',
-    fontWeight: '800',
-  },
-  featureText: {
+  input: {
+    color: BrandColors.lightInputText,
     flex: 1,
+    fontSize: 17,
+    paddingVertical: 10,
+  },
+  inputDark: {
+    color: BrandColors.darkInputText,
+  },
+  suffix: {
+    color: BrandColors.lightMutedText,
+    fontSize: 13,
+  },
+  optionGroup: {
+    gap: 8,
+  },
+  segmented: {
+    backgroundColor: BrandColors.primarySoft,
+    borderRadius: 8,
+    flexDirection: 'row',
+    padding: 4,
+  },
+  segmentedDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+  },
+  segment: {
+    alignItems: 'center',
+    borderRadius: 6,
+    flex: 1,
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  segmentActive: {
+    backgroundColor: BrandColors.primary,
+  },
+  segmentText: {
+    color: BrandColors.lightInputText,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  segmentTextDark: {
+    color: BrandColors.darkInputText,
+  },
+  segmentTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  checkboxRow: {
+    alignItems: 'center',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  checkboxRowDark: {
+    borderColor: BrandColors.darkBorder,
+  },
+  checkboxRowActive: {
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.primary,
+  },
+  checkboxRowActiveDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+  },
+  checkbox: {
+    alignItems: 'center',
+    borderColor: '#7caed3',
+    borderRadius: 5,
+    borderWidth: 2,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  checkboxActive: {
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  checkboxText: {
+    flex: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
   },
   button: {
     alignItems: 'center',
     backgroundColor: BrandColors.primary,
     borderRadius: 8,
+    flex: 1,
     minHeight: 52,
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    textAlign: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.45,
   },
   buttonText: {
     color: '#ffffff',
     fontSize: 17,
     fontWeight: '800',
   },
-  disclaimer: {
-    color: BrandColors.lightMutedText,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
+  secondaryButton: {
+    alignItems: 'center',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 52,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    color: BrandColors.primaryDark,
+    fontWeight: '800',
   },
 });

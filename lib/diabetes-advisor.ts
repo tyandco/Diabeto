@@ -1,8 +1,9 @@
 export type DiabetesProfile = {
   age: number;
+  canMeasureGlucose: boolean;
   heightCm: number;
   weightKg: number;
-  glucoseMgDl: number;
+  glucoseMgDl?: number;
   familyHistory: boolean;
   activityLevel: 'low' | 'moderate' | 'high';
   sugaryDrinks: 'rarely' | 'sometimes' | 'often';
@@ -43,12 +44,14 @@ export function predictDiabetesRisk(profile: DiabetesProfile): DiabetesPredictio
     score += 10;
   }
 
-  if (profile.glucoseMgDl >= 126) {
-    score += 30;
-  } else if (profile.glucoseMgDl >= 100) {
-    score += 18;
-  } else if (profile.glucoseMgDl >= 90) {
-    score += 6;
+  if (typeof profile.glucoseMgDl === 'number') {
+    if (profile.glucoseMgDl >= 126) {
+      score += 30;
+    } else if (profile.glucoseMgDl >= 100) {
+      score += 18;
+    } else if (profile.glucoseMgDl >= 90) {
+      score += 6;
+    }
   }
 
   if (profile.familyHistory) {
@@ -106,8 +109,10 @@ function buildAdvice(
     advice.push('A small weight loss goal, even 5% to 7% of body weight, can improve insulin sensitivity.');
   }
 
-  if (profile.glucoseMgDl >= 100) {
+  if (typeof profile.glucoseMgDl === 'number' && profile.glucoseMgDl >= 100) {
     advice.push('Your glucose entry is elevated, so consider checking fasting glucose or A1C with a clinician.');
+  } else if (!profile.canMeasureGlucose) {
+    advice.push('If possible, ask a clinic or pharmacy about checking fasting glucose or A1C for a clearer risk picture.');
   }
 
   if (profile.sugaryDrinks !== 'rarely') {

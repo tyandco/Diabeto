@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -10,7 +13,6 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -18,22 +20,67 @@ import { BrandColors } from '@/constants/theme';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
 
+const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
+
 const starterMessages: ChatMessage[] = [
   {
     id: 'welcome',
     role: 'bot',
-    text: 'Hi, I am DiabetoBot. Ask me about healthy meals, exercise, sugary drinks, carbs, or diabetes risk.',
+    text: 'Hi, I am Ribbon. I can help you plan balanced meals, understand food choices, review images, and build habits that lower diabetes risk.',
   },
 ];
+
+const quickPrompts = [
+  'Suggest breakfast',
+  'Suggest lunch',
+  'Suggest dinner',
+  'Healthy snack ideas',
+];
+
+type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'>;
 
 export default function ChatScreen() {
   const isDark = useColorScheme() === 'dark';
   const healthContext = useHealthContext();
   const healthSummary = formatHealthContext(healthContext);
+  const scrollRef = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [attachedImage, setAttachedImage] = useState<ChatImage | null>(null);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(CHAT_MEMORY_KEY)
+      .then((value) => {
+        if (!value) {
+          return;
+        }
+
+        const storedMessages = JSON.parse(value) as StoredMessage[];
+
+        if (storedMessages.length > 0) {
+          setMessages(storedMessages);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const storedMessages = messages
+      .filter((message) => message.id !== 'welcome')
+      .slice(-30)
+      .map<StoredMessage>((message) => ({
+        id: message.id,
+        role: message.role,
+        text: message.text,
+      }));
+
+    AsyncStorage.setItem(CHAT_MEMORY_KEY, JSON.stringify(storedMessages)).catch(() => undefined);
+  }, [messages]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [messages, isSending, attachedImage]);
 
   const attachImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -67,8 +114,8 @@ export default function ChatScreen() {
     });
   };
 
-  const sendMessage = async () => {
-    const trimmed = draft.trim();
+  const sendMessage = async (overrideText?: string) => {
+    const trimmed = (overrideText ?? draft).trim();
 
     if ((!trimmed && !attachedImage) || isSending) {
       return;
@@ -90,38 +137,40 @@ export default function ChatScreen() {
 
     try {
       const reply = await sendDiabetoChat(nextMessages, healthSummary);
-      const botMessage: ChatMessage = {
+      addMessage({
         id: `bot-${Date.now()}`,
         role: 'bot',
         text: reply,
-      };
-
-      setMessages((current) => [...current, botMessage]);
+      });
     } catch (error) {
-      const botMessage: ChatMessage = {
+      addMessage({
         id: `bot-error-${Date.now()}`,
         role: 'bot',
         text:
           error instanceof Error
             ? error.message
             : 'The chatbot could not reply right now. Please try again.',
-      };
-
-      setMessages((current) => [...current, botMessage]);
+      });
     } finally {
       setIsSending(false);
     }
   };
 
+  const clearMemory = () => {
+    setMessages(starterMessages);
+    AsyncStorage.removeItem(CHAT_MEMORY_KEY).catch(() => undefined);
+  };
+
   const addBotMessage = (text: string) => {
-    setMessages((current) => [
-      ...current,
-      {
-        id: `bot-${Date.now()}`,
-        role: 'bot',
-        text,
-      },
-    ]);
+    addMessage({
+      id: `bot-${Date.now()}`,
+      role: 'bot',
+      text,
+    });
+  };
+
+  const addMessage = (message: ChatMessage) => {
+    setMessages((current) => [...current, message]);
   };
 
   return (
@@ -130,42 +179,45 @@ export default function ChatScreen() {
         behavior={Platform.select({ ios: 'padding', default: undefined })}
         style={styles.keyboardView}>
         <View style={styles.header}>
-          <ThemedText type="title">Chat</ThemedText>
+          <View style={styles.headerTop}>
+            <View>
+          <ThemedText type="title">Ribbon</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            Ask DiabetoBot for prevention advice.
-          </ThemedText>
+                Your Diabeto health companion.
+              </ThemedText>
+            </View>
+            <Pressable onPress={clearMemory} style={[styles.clearButton, isDark && styles.clearButtonDark]}>
+              <ThemedText style={[styles.clearText, isDark && styles.contextTextDark]}>
+                Clear
+              </ThemedText>
+            </Pressable>
+          </View>
           <View style={[styles.contextPill, isDark && styles.contextPillDark]}>
             <ThemedText style={[styles.contextText, isDark && styles.contextTextDark]}>
-              {healthSummary ? 'Using your latest Predict tab data' : 'Add details in Predict first'}
+              {healthSummary ? 'Using Predict data and chat memory' : 'Using chat memory only'}
             </ThemedText>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.messages}>
-          {messages.map((message) => {
-            const isUser = message.role === 'user';
-            return (
-              <View
-                key={message.id}
-                style={[
-                  styles.bubble,
-                  isUser ? styles.userBubble : styles.botBubble,
-                  !isUser && isDark && styles.botBubbleDark,
-                ]}>
-                {message.image ? <Image source={{ uri: message.image.uri }} style={styles.messageImage} /> : null}
-                <ThemedText style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}>
-                  {message.text}
-                </ThemedText>
-              </View>
-            );
-          })}
-          {isSending ? (
-            <View style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
-              <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
-                DiabetoBot is thinking...
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.messages}>
+          {messages.map((message) => (
+            <AnimatedMessageBubble key={message.id} isDark={isDark} message={message} />
+          ))}
+          {isSending ? <TypingBubble isDark={isDark} /> : null}
+        </ScrollView>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPrompts}>
+          {quickPrompts.map((prompt) => (
+            <Pressable
+              disabled={isSending}
+              key={prompt}
+              onPress={() => sendMessage(prompt)}
+              style={[styles.quickPrompt, isDark && styles.quickPromptDark]}>
+              <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
+                {prompt}
               </ThemedText>
-            </View>
-          ) : null}
+            </Pressable>
+          ))}
         </ScrollView>
 
         <View style={[styles.composer, isDark && styles.composerDark]}>
@@ -180,7 +232,7 @@ export default function ChatScreen() {
           <TextInput
             multiline
             onChangeText={setDraft}
-            placeholder="Ask about meals, exercise, or sugar..."
+            placeholder="Ask about meals, habits, or an image..."
             placeholderTextColor={isDark ? '#8faec5' : '#7d8b95'}
             style={[styles.input, isDark && styles.inputDark]}
             value={draft}
@@ -193,7 +245,7 @@ export default function ChatScreen() {
           </Pressable>
           <Pressable
             disabled={isSending}
-            onPress={sendMessage}
+            onPress={() => sendMessage()}
             style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
             <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
           </Pressable>
@@ -203,21 +255,103 @@ export default function ChatScreen() {
   );
 }
 
+function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDark: boolean }) {
+  const isUser = message.role === 'user';
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        duration: 220,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        duration: 220,
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, translateY]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.messageRow,
+        isUser && styles.userMessageRow,
+        {
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}>
+      {!isUser ? <View style={styles.avatar}><ThemedText style={styles.avatarText}>R</ThemedText></View> : null}
+      <View
+        style={[
+          styles.bubble,
+          isUser ? styles.userBubble : styles.botBubble,
+          !isUser && isDark && styles.botBubbleDark,
+        ]}>
+        {!isUser ? <ThemedText style={[styles.senderLabel, isDark && styles.mutedDark]}>Ribbon</ThemedText> : null}
+        {message.image ? <Image source={{ uri: message.image.uri }} style={styles.messageImage} /> : null}
+        <ThemedText style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}>
+          {message.text}
+        </ThemedText>
+      </View>
+    </Animated.View>
+  );
+}
+
+function TypingBubble({ isDark }: { isDark: boolean }) {
+  return (
+    <View style={styles.messageRow}>
+      <View style={styles.avatar}>
+        <ThemedText style={styles.avatarText}>R</ThemedText>
+      </View>
+      <View style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
+        <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
+          Ribbon is preparing a response...
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
   keyboardView: {
     flex: 1,
-    gap: 14,
+    gap: 12,
     padding: 20,
     paddingTop: 64,
   },
   header: {
-    gap: 8,
+    gap: 10,
+  },
+  headerTop: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
   },
   subtitle: {
     color: BrandColors.lightMutedText,
+  },
+  clearButton: {
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  clearButtonDark: {
+    borderColor: BrandColors.darkBorder,
+  },
+  clearText: {
+    color: BrandColors.primaryDark,
+    fontWeight: '800',
   },
   contextPill: {
     alignSelf: 'flex-start',
@@ -245,13 +379,42 @@ const styles = StyleSheet.create({
     color: BrandColors.darkMutedText,
   },
   messages: {
-    gap: 12,
+    gap: 14,
     paddingBottom: 8,
+  },
+  messageRow: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  userMessageRow: {
+    justifyContent: 'flex-end',
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.primary,
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 16,
   },
   bubble: {
     borderRadius: 8,
-    maxWidth: '86%',
-    padding: 12,
+    maxWidth: '84%',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  senderLabel: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   messageImage: {
     borderRadius: 6,
@@ -260,8 +423,7 @@ const styles = StyleSheet.create({
     width: 180,
   },
   botBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: BrandColors.primarySoft,
+    backgroundColor: BrandColors.lightSurface,
     borderColor: BrandColors.lightBorder,
     borderWidth: 1,
   },
@@ -270,7 +432,6 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.darkBorder,
   },
   userBubble: {
-    alignSelf: 'flex-end',
     backgroundColor: BrandColors.primary,
   },
   botText: {
@@ -281,6 +442,26 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: '#ffffff',
+  },
+  quickPrompts: {
+    gap: 8,
+  },
+  quickPrompt: {
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  quickPromptDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
+  },
+  quickPromptText: {
+    color: BrandColors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800',
   },
   composer: {
     alignItems: 'flex-end',
