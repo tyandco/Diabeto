@@ -215,11 +215,10 @@ export default function ChatScreen() {
           {isSending ? <TypingBubble isDark={isDark} /> : null}
         </ScrollView>
 
-        <LiquidGlassView isDark={isDark} style={[styles.quickPromptPanel, isDark && styles.quickPromptPanelDark]}>
-          <ThemedText style={[styles.quickPromptLabel, isDark && styles.mutedDark]}>
-            Meal shortcuts
-          </ThemedText>
-          <View style={styles.quickPrompts}>
+        <ScrollView
+          contentContainerStyle={styles.quickPrompts}
+          horizontal
+          showsHorizontalScrollIndicator={false}>
           {quickPrompts.map((prompt) => (
             <Pressable
               disabled={isSending}
@@ -231,8 +230,7 @@ export default function ChatScreen() {
               </ThemedText>
             </Pressable>
           ))}
-          </View>
-        </LiquidGlassView>
+        </ScrollView>
 
         <LiquidGlassView
           isDark={isDark}
@@ -484,37 +482,20 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   quickPrompts: {
+    alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-  },
-  quickPromptPanel: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-    padding: 10,
-  },
-  quickPromptPanelDark: {
-    backgroundColor: BrandColors.darkSurface,
-    borderColor: BrandColors.darkBorder,
-  },
-  quickPromptLabel: {
-    color: BrandColors.lightMutedText,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
+    paddingRight: 6,
   },
   quickPrompt: {
     backgroundColor: BrandColors.primarySoft,
     borderColor: BrandColors.lightBorder,
     borderRadius: 999,
     borderWidth: 1,
-    minHeight: 36,
+    minHeight: 34,
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
   },
   quickPromptDark: {
     backgroundColor: BrandColors.darkSurface,

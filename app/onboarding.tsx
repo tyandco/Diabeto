@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  LayoutAnimation,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -87,6 +88,7 @@ export default function OnboardingScreen() {
     }
 
     if (page < pageTitles.length - 1) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setDirection(1);
       setPage((current) => current + 1);
       return;
@@ -105,6 +107,7 @@ export default function OnboardingScreen() {
   };
 
   const back = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setDirection(-1);
     setPage((current) => Math.max(0, current - 1));
   };
@@ -112,19 +115,6 @@ export default function OnboardingScreen() {
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.progressRow}>
-          {pageTitles.map((title, index) => (
-            <View
-              key={title}
-              style={[
-                styles.progressDot,
-                index <= page && styles.progressDotActive,
-                isDark && styles.progressDotDark,
-              ]}
-            />
-          ))}
-        </View>
-
         <Animated.View
           key={page}
           style={[
@@ -148,6 +138,24 @@ export default function OnboardingScreen() {
           {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
           {page === 4 ? <RibbonPage isDark={isDark} /> : null}
         </Animated.View>
+
+        <View style={styles.progressRow}>
+          {pageTitles.map((title, index) => {
+            const isCurrent = index === page;
+
+            return (
+              <View
+                accessibilityLabel={`${title} step`}
+                key={title}
+                style={[
+                  styles.progressDot,
+                  isDark && styles.progressDotDark,
+                  isCurrent && styles.progressDotCurrent,
+                ]}
+              />
+            );
+          })}
+        </View>
       </ScrollView>
 
       <LiquidGlassView
@@ -543,6 +551,7 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 22,
+    flexGrow: 1,
     justifyContent: 'flex-start',
     padding: 24,
     paddingBottom: 132,
@@ -557,19 +566,26 @@ const styles = StyleSheet.create({
   progressRow: {
     alignSelf: 'center',
     flexDirection: 'row',
+    marginTop: 'auto',
+    paddingTop: 18,
     gap: 7,
   },
   progressDot: {
-    backgroundColor: '#d9e5e2',
+    backgroundColor: BrandColors.lightBorder,
     borderRadius: 999,
-    height: 7,
-    width: 32,
-  },
-  progressDotActive: {
-    backgroundColor: BrandColors.primary,
+    height: 8,
+    opacity: 0.95,
+    width: 8,
   },
   progressDotDark: {
-    backgroundColor: BrandColors.darkBorder,
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
+    borderWidth: 1,
+  },
+  progressDotCurrent: {
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
+    width: 30,
   },
   logoMark: {
     alignItems: 'center',
