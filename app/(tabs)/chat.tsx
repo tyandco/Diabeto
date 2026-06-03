@@ -24,6 +24,7 @@ import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
 
 const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
+const ribbonImage = require('@/assets/images/ribbon.png');
 
 const starterMessages: ChatMessage[] = [
   {
@@ -360,7 +361,11 @@ function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDa
           transform: [{ translateY }],
         },
       ]}>
-      {!isUser ? <View style={styles.avatar}><ThemedText style={styles.avatarText}>R</ThemedText></View> : null}
+      {!isUser ? (
+        <View style={styles.avatar}>
+          <Image source={ribbonImage} style={styles.avatarImage} />
+        </View>
+      ) : null}
       <View
         style={[
           styles.bubble,
@@ -381,7 +386,7 @@ function TypingBubble({ isDark }: { isDark: boolean }) {
   return (
     <View style={styles.messageRow}>
       <View style={styles.avatar}>
-        <ThemedText style={styles.avatarText}>R</ThemedText>
+        <Image source={ribbonImage} style={styles.avatarImage} />
       </View>
       <View style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
         <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
@@ -471,17 +476,19 @@ const styles = StyleSheet.create({
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: BrandColors.primary,
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.primary,
+    borderWidth: 1,
     borderRadius: 14,
     height: 28,
     justifyContent: 'center',
+    overflow: 'hidden',
     width: 28,
   },
-  avatarText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    lineHeight: 16,
+  avatarImage: {
+    height: 34,
+    marginTop: 3,
+    width: 34,
   },
   bubble: {
     borderRadius: 8,

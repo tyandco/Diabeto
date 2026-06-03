@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   LayoutAnimation,
   Pressable,
   ScrollView,
@@ -18,6 +19,9 @@ import { ThemedView } from '@/components/themed-view';
 import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
+
+const appIconImage = require('@/assets/images/icon.png');
+const ribbonImage = require('@/assets/images/ribbon.png');
 
 type FormState = {
   age: string;
@@ -188,7 +192,7 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
   return (
     <View style={styles.page}>
       <View style={styles.logoMark}>
-        <ThemedText style={styles.logoText}>D</ThemedText>
+        <Image source={appIconImage} style={styles.logoImage} />
       </View>
       <ThemedText type="title" style={styles.title}>
         Diabeto
@@ -360,8 +364,8 @@ function GlucosePage({
 function RibbonPage({ isDark }: { isDark: boolean }) {
   return (
     <View style={styles.page}>
-      <View style={styles.logoMark}>
-        <ThemedText style={styles.logoText}>R</ThemedText>
+      <View style={styles.mascotMark}>
+        <Image source={ribbonImage} style={styles.mascotImage} />
       </View>
       <ThemedText type="title" style={styles.title}>
         Meet Ribbon
@@ -601,23 +605,34 @@ const styles = StyleSheet.create({
   logoMark: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: BrandColors.primaryDark,
+    backgroundColor: '#ffffff',
     borderColor: 'rgba(255, 255, 255, 0.75)',
     borderRadius: 28,
     borderWidth: 1,
     height: 92,
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: BrandColors.primaryDark,
     shadowOffset: { height: 14, width: 0 },
     shadowOpacity: 0.22,
     shadowRadius: 22,
     width: 92,
   },
-  logoText: {
-    color: '#ffffff',
-    fontSize: 42,
-    fontWeight: '800',
-    lineHeight: 48,
+  logoImage: {
+    height: 92,
+    width: 92,
+  },
+  mascotImage: {
+    height: 172,
+    width: 172,
+  },
+  mascotMark: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    height: 172,
+    justifyContent: 'center',
+    marginBottom: -2,
+    width: 172,
   },
   title: {
     color: BrandColors.primary,
