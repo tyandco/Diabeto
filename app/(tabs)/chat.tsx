@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -18,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors, Fonts } from '@/constants/theme';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
@@ -86,7 +86,22 @@ export default function ChatScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages, isSending, attachedImage]);
 
-  const attachImage = async () => {
+  const chooseAttachmentSource = () => {
+    Alert.alert('Attach image', 'Choose where the image should come from.', [
+      { text: 'Take photo', onPress: takePhoto },
+      { text: 'Choose photo', onPress: pickImage },
+      { style: 'cancel', text: 'Cancel' },
+    ]);
+  };
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      addBotMessage('Photo access is needed before Ribbon can review an image from your library.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
       base64: true,
@@ -94,6 +109,28 @@ export default function ChatScreen() {
       quality: 0.6,
     });
 
+    handleImageResult(result);
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      addBotMessage('Camera access is needed before Ribbon can review a new photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      base64: true,
+      mediaTypes: ['images'],
+      quality: 0.6,
+    });
+
+    handleImageResult(result);
+  };
+
+  const handleImageResult = (result: ImagePicker.ImagePickerResult) => {
     if (result.canceled) {
       return;
     }
@@ -205,9 +242,10 @@ export default function ChatScreen() {
 
         <ScrollView
           ref={scrollRef}
+          style={styles.messagesScroll}
           contentContainerStyle={[
             styles.messages,
-            { paddingBottom: Math.max(16, insets.bottom + 8) },
+            { paddingBottom: 12 },
           ]}>
           {messages.map((message) => (
             <AnimatedMessageBubble key={message.id} isDark={isDark} message={message} />
@@ -215,78 +253,78 @@ export default function ChatScreen() {
           {isSending ? <TypingBubble isDark={isDark} /> : null}
         </ScrollView>
 
-        <ScrollView
-          contentContainerStyle={styles.quickPrompts}
-          horizontal
-          showsHorizontalScrollIndicator={false}>
-          {quickPrompts.map((prompt) => (
-            <Pressable
-              disabled={isSending}
-              key={prompt}
-              onPress={() => sendMessage(prompt)}
-              style={[styles.quickPrompt, isDark && styles.quickPromptDark]}>
-              <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
-                {prompt}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={[styles.chatBottom, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <ScrollView
+            contentContainerStyle={styles.quickPrompts}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.quickPromptScroller}>
+            {quickPrompts.map((prompt) => (
+              <Pressable
+                disabled={isSending}
+                key={prompt}
+                onPress={() => sendMessage(prompt)}
+                style={[styles.quickPrompt, isDark && styles.quickPromptDark]}>
+                <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
+                  {prompt}
+                </ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-        <LiquidGlassView
-          isDark={isDark}
-          interactive
-          style={[styles.composer, isDark && styles.composerDark]}>
-          {attachedImage ? (
-            <View style={styles.attachmentPreview}>
-              <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
-              <View style={styles.attachmentText}>
-                <ThemedText style={[styles.attachmentTitle, isDark && styles.contextTextDark]}>
-                  Image attached
-                </ThemedText>
-                <ThemedText style={[styles.attachmentSubtitle, isDark && styles.mutedDark]}>
-                  Ready for Ribbon to review.
-                </ThemedText>
+          <View style={[styles.composer, isDark && styles.composerDark]}>
+            {attachedImage ? (
+              <View style={styles.attachmentPreview}>
+                <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
+                <View style={styles.attachmentText}>
+                  <ThemedText style={[styles.attachmentTitle, isDark && styles.contextTextDark]}>
+                    Image attached
+                  </ThemedText>
+                  <ThemedText style={[styles.attachmentSubtitle, isDark && styles.mutedDark]}>
+                    Ready for Ribbon to review.
+                  </ThemedText>
+                </View>
+                <Pressable onPress={() => setAttachedImage(null)} style={styles.removeImageButton}>
+                  <ThemedText style={styles.removeImageText}>Remove</ThemedText>
+                </Pressable>
               </View>
-              <Pressable onPress={() => setAttachedImage(null)} style={styles.removeImageButton}>
-                <ThemedText style={styles.removeImageText}>Remove</ThemedText>
+            ) : null}
+            <TextInput
+              multiline
+              onChangeText={setDraft}
+              placeholder="Ask about meals, habits, or an image..."
+              placeholderTextColor={isDark ? '#8faec5' : '#7d8b95'}
+              style={[styles.input, attachedImage && styles.inputWithAttachment, isDark && styles.inputDark]}
+              value={draft}
+            />
+            <View style={styles.composerActions}>
+              <Pressable
+                disabled={isSending}
+                onPress={chooseAttachmentSource}
+                style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
+                <IconSymbol
+                  color={BrandColors.primary}
+                  name="paperclip"
+                  size={17}
+                  weight="semibold"
+                />
+                <ThemedText style={styles.attachText}>Attach</ThemedText>
+              </Pressable>
+              <Pressable
+                disabled={isSending}
+                onPress={() => sendMessage()}
+                style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
+                <IconSymbol
+                  color="#ffffff"
+                  name="paperplane.fill"
+                  size={17}
+                  weight="semibold"
+                />
+                <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
               </Pressable>
             </View>
-          ) : null}
-          <TextInput
-            multiline
-            onChangeText={setDraft}
-            placeholder="Ask about meals, habits, or an image..."
-            placeholderTextColor={isDark ? '#8faec5' : '#7d8b95'}
-            style={[styles.input, attachedImage && styles.inputWithAttachment, isDark && styles.inputDark]}
-            value={draft}
-          />
-          <View style={styles.composerActions}>
-            <Pressable
-              disabled={isSending}
-              onPress={attachImage}
-              style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
-              <IconSymbol
-                color={BrandColors.primary}
-                name="paperclip"
-                size={17}
-                weight="semibold"
-              />
-              <ThemedText style={styles.attachText}>Attach</ThemedText>
-            </Pressable>
-            <Pressable
-              disabled={isSending}
-              onPress={() => sendMessage()}
-              style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
-              <IconSymbol
-                color="#ffffff"
-                name="paperplane.fill"
-                size={17}
-                weight="semibold"
-              />
-              <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
-            </Pressable>
           </View>
-        </LiquidGlassView>
+        </View>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -362,7 +400,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
     padding: 20,
-    paddingBottom: 14,
+    paddingBottom: 0,
     paddingTop: 64,
   },
   header: {
@@ -419,6 +457,9 @@ const styles = StyleSheet.create({
   messages: {
     gap: 14,
     paddingBottom: 8,
+  },
+  messagesScroll: {
+    flex: 1,
   },
   messageRow: {
     alignItems: 'flex-end',
@@ -480,6 +521,16 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: '#ffffff',
+  },
+  chatBottom: {
+    flexGrow: 0,
+    flexShrink: 0,
+    gap: 10,
+  },
+  quickPromptScroller: {
+    flexGrow: 0,
+    flexShrink: 0,
+    maxHeight: 38,
   },
   quickPrompts: {
     alignItems: 'center',

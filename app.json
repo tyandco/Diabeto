@@ -20,10 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "server",
@@ -34,7 +31,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Diabeto uses your selected photo so the chatbot can give food and health habit advice."
+          "cameraPermission": "Diabeto uses your camera so Ribbon can review a food or drink photo you take.",
+          "microphonePermission": false,
+          "photosPermission": "Diabeto uses your selected photo so Ribbon can give food and health habit advice."
         }
       ],
       [

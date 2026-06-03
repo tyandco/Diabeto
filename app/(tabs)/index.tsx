@@ -10,7 +10,6 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors, Layout } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
@@ -96,7 +95,7 @@ export default function PredictScreen() {
           </ThemedText>
         </View>
 
-        <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">Your Details</ThemedText>
 
           <View style={styles.grid}>
@@ -184,9 +183,9 @@ export default function PredictScreen() {
             </View>
             <ThemedText type="defaultSemiBold">Family history of diabetes</ThemedText>
           </Pressable>
-        </LiquidGlassView>
+        </View>
 
-        <LiquidGlassView isDark={isDark} style={[styles.resultPanel, isDark && styles.panelDark]}>
+        <View style={[styles.resultPanel, isDark && styles.panelDark]}>
           {prediction ? (
             <>
               <View style={styles.resultTop}>
@@ -219,7 +218,7 @@ export default function PredictScreen() {
           ) : (
             <ThemedText>Enter valid numbers to see your prediction.</ThemedText>
           )}
-        </LiquidGlassView>
+        </View>
 
         <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
           This app is for education only and does not diagnose diabetes.

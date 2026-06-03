@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { LiquidGlassView } from '@/components/ui/liquid-glass-view';
 import { BrandColors } from '@/constants/theme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
@@ -139,6 +138,9 @@ export default function OnboardingScreen() {
           {page === 4 ? <RibbonPage isDark={isDark} /> : null}
         </Animated.View>
 
+      </ScrollView>
+
+      <View style={[styles.progressRail, isDark && styles.progressRailDark]}>
         <View style={styles.progressRow}>
           {pageTitles.map((title, index) => {
             const isCurrent = index === page;
@@ -156,10 +158,9 @@ export default function OnboardingScreen() {
             );
           })}
         </View>
-      </ScrollView>
+      </View>
 
-      <LiquidGlassView
-        isDark={isDark}
+      <View
         style={[
           styles.footer,
           isDark && styles.footerDark,
@@ -178,7 +179,7 @@ export default function OnboardingScreen() {
             {page === pageTitles.length - 1 ? 'Start Diabeto' : 'Continue'}
           </ThemedText>
         </Pressable>
-      </LiquidGlassView>
+      </View>
     </ThemedView>
   );
 }
@@ -223,7 +224,7 @@ function TermsPage({
   return (
     <View style={styles.page}>
       <ThemedText type="title">Before You Start</ThemedText>
-      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="subtitle">Terms of Service</ThemedText>
         <ThemedText>
           Diabeto is for education and prevention support only. It does not diagnose diabetes,
@@ -232,8 +233,8 @@ function TermsPage({
         <ThemedText>
           You are responsible for checking important health decisions with a qualified healthcare professional.
         </ThemedText>
-      </LiquidGlassView>
-      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
+      </View>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="subtitle">Privacy Policy</ThemedText>
         <ThemedText>
           Diabeto uses the details you enter to estimate risk and personalize the AI companion&apos;s replies.
@@ -242,7 +243,7 @@ function TermsPage({
         <ThemedText>
           Do not upload private medical documents, IDs, or photos you do not want processed by the AI provider.
         </ThemedText>
-      </LiquidGlassView>
+      </View>
       <Checkbox
         checked={acceptedTerms}
         isDark={isDark}
@@ -345,13 +346,13 @@ function GlucosePage({
           isDark={isDark}
         />
       ) : null}
-      <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
         <ThemedText type="defaultSemiBold">What this means</ThemedText>
         <ThemedText style={styles.helpText}>
           If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history,
           activity, and sugary drink habits. A lab glucose or A1C test can make the picture clearer later.
         </ThemedText>
-      </LiquidGlassView>
+      </View>
     </View>
   );
 }
@@ -383,14 +384,14 @@ function RibbonPage({ isDark }: { isDark: boolean }) {
 
 function InfoCard({ isDark, items }: { isDark: boolean; items: string[] }) {
   return (
-    <LiquidGlassView isDark={isDark} style={[styles.panel, isDark && styles.panelDark]}>
+    <View style={[styles.panel, isDark && styles.panelDark]}>
       {items.map((item) => (
         <View key={item} style={styles.infoRow}>
           <View style={styles.infoDot} />
           <ThemedText style={styles.infoText}>{item}</ThemedText>
         </View>
       ))}
-    </LiquidGlassView>
+    </View>
   );
 }
 
@@ -554,7 +555,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'flex-start',
     padding: 24,
-    paddingBottom: 132,
+    paddingBottom: 24,
     paddingTop: 56,
   },
   pageTransition: {
@@ -563,11 +564,21 @@ const styles = StyleSheet.create({
   page: {
     gap: 20,
   },
+  progressRail: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderTopColor: BrandColors.lightBorder,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 10,
+    paddingTop: 12,
+  },
+  progressRailDark: {
+    backgroundColor: 'rgba(7, 19, 31, 0.88)',
+    borderTopColor: BrandColors.darkBorder,
+  },
   progressRow: {
     alignSelf: 'center',
     flexDirection: 'row',
-    marginTop: 'auto',
-    paddingTop: 18,
     gap: 7,
   },
   progressDot: {
