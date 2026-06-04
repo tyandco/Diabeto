@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,13 +7,11 @@ import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   accentPalettes,
-  getAppIconSource,
   ribbonToneLabels,
   updateAppPreferences,
   useAccentPalette,
   useAppPreferences,
   type AccentTheme,
-  type AppIconChoice,
   type AppearanceMode,
   type RibbonTone,
 } from '@/lib/app-preferences';
@@ -22,12 +20,6 @@ const appearanceOptions: { label: string; value: AppearanceMode }[] = [
   { label: 'System', value: 'system' },
   { label: 'Light', value: 'light' },
   { label: 'Dark', value: 'dark' },
-];
-
-const iconOptions: { label: string; value: AppIconChoice }[] = [
-  { label: 'Diabeto', value: 'diabeto' },
-  { label: 'Ribbon', value: 'ribbon' },
-  { label: 'Minimal', value: 'minimal' },
 ];
 
 const toneOptions: RibbonTone[] = ['warm', 'cold', 'aggressive', 'casual'];
@@ -112,28 +104,6 @@ export default function SettingsScreen() {
                   ]}>
                   <View style={[styles.swatch, { backgroundColor: palette.primary }]} />
                   <ThemedText style={styles.optionText}>{palette.name}</ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">App Icon</ThemedText>
-          <View style={styles.iconGrid}>
-            {iconOptions.map((option) => {
-              const selected = preferences.appIcon === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => updateAppPreferences({ appIcon: option.value })}
-                  style={[
-                    styles.iconOption,
-                    isDark && styles.iconOptionDark,
-                    selected && { borderColor: accent.primary },
-                  ]}>
-                  <Image source={getAppIconSource(option.value)} style={styles.iconPreview} />
-                  <ThemedText style={styles.optionText}>{option.label}</ThemedText>
                 </Pressable>
               );
             })}

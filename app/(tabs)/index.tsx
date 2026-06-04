@@ -6,19 +6,18 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getAppIconSource, useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
+import { getAppIconSource, useAccentPalette } from '@/lib/app-preferences';
 
 export default function HomeScreen() {
   const isDark = useColorScheme() === 'dark';
   const accent = useAccentPalette();
-  const preferences = useAppPreferences();
   const router = useRouter();
 
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Image source={getAppIconSource(preferences.appIcon)} style={styles.heroIcon} />
+          <Image source={getAppIconSource()} style={styles.heroIcon} />
           <View style={styles.heroCopy}>
             <ThemedText type="title">Diabeto</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>

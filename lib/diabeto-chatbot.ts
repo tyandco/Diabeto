@@ -70,8 +70,6 @@ Keep replies clear and under 120 words unless the user asks for a full meal plan
 `;
 
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
-const EXPO_PUBLIC_GEMINI_MODEL = process.env.EXPO_PUBLIC_GEMINI_MODEL;
-
 export async function sendDiabetoChat(
   messages: ChatMessage[],
   healthContext?: string | null,
@@ -262,7 +260,7 @@ function isLikelyIncompleteReply(text: string) {
 
 function cleanGeminiError(message: string) {
   if (message.toLowerCase().includes('api key not valid')) {
-    return 'Gemini says this API key is not valid. Check EXPO_PUBLIC_GEMINI_API_KEY in .env, then restart Expo.';
+    return 'Gemini says this API key is not valid. Check the Gemini API key saved in Settings.';
   }
 
   if (message.toLowerCase().includes('quota')) {
@@ -298,7 +296,7 @@ function getRetrySeconds(message: string) {
 }
 
 function getGeminiModel() {
-  return (EXPO_PUBLIC_GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL).replace(/^models\//, '');
+  return DEFAULT_GEMINI_MODEL;
 }
 
 function formatCurrentDateForAI() {

@@ -1,17 +1,15 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme as useRNColorScheme, type ImageSourcePropType } from 'react-native';
+import { useColorScheme as useRNColorScheme } from 'react-native';
 
 const APP_PREFERENCES_KEY = 'diabeto.app-preferences.v1';
 
 export type AppearanceMode = 'system' | 'light' | 'dark';
 export type AccentTheme = 'sky' | 'mint' | 'violet' | 'coral';
-export type AppIconChoice = 'diabeto' | 'ribbon' | 'minimal';
 export type RibbonTone = 'warm' | 'cold' | 'aggressive' | 'casual';
 
 export type AppPreferences = {
   accentTheme: AccentTheme;
-  appIcon: AppIconChoice;
   appearanceMode: AppearanceMode;
   geminiApiKey: string;
   ribbonTone: RibbonTone;
@@ -26,7 +24,6 @@ export type AccentPalette = {
 
 export const defaultPreferences: AppPreferences = {
   accentTheme: 'sky',
-  appIcon: 'diabeto',
   appearanceMode: 'system',
   geminiApiKey: '',
   ribbonTone: 'warm',
@@ -125,15 +122,7 @@ export function useAccentPalette() {
   return accentPalettes[preferences.accentTheme];
 }
 
-export function getAppIconSource(choice: AppIconChoice): ImageSourcePropType {
-  if (choice === 'ribbon') {
-    return require('@/assets/images/ribbon.png');
-  }
-
-  if (choice === 'minimal') {
-    return require('@/assets/images/splash-icon.png');
-  }
-
+export function getAppIconSource() {
   return require('@/assets/images/icon.png');
 }
 
@@ -165,7 +154,6 @@ function subscribe(listener: () => void) {
 function sanitizePreferences(value: Partial<AppPreferences>) {
   return {
     accentTheme: isAccentTheme(value.accentTheme) ? value.accentTheme : defaultPreferences.accentTheme,
-    appIcon: isAppIconChoice(value.appIcon) ? value.appIcon : defaultPreferences.appIcon,
     appearanceMode: isAppearanceMode(value.appearanceMode)
       ? value.appearanceMode
       : defaultPreferences.appearanceMode,
@@ -180,10 +168,6 @@ function isAppearanceMode(value: unknown): value is AppearanceMode {
 
 function isAccentTheme(value: unknown): value is AccentTheme {
   return value === 'sky' || value === 'mint' || value === 'violet' || value === 'coral';
-}
-
-function isAppIconChoice(value: unknown): value is AppIconChoice {
-  return value === 'diabeto' || value === 'ribbon' || value === 'minimal';
 }
 
 function isRibbonTone(value: unknown): value is RibbonTone {

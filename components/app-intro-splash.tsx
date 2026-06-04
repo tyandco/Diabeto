@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 
 import { BrandColors, Fonts } from '@/constants/theme';
-import { getAppIconSource, useAppPreferences } from '@/lib/app-preferences';
+import { getAppIconSource } from '@/lib/app-preferences';
 
 type AppIntroSplashProps = {
   isDark: boolean;
 };
 
 export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
-  const preferences = useAppPreferences();
   const [isVisible, setIsVisible] = useState(true);
   const iconOpacity = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(0.72)).current;
@@ -95,7 +94,7 @@ export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
               transform: [{ scale: iconScale }],
             },
           ]}>
-          <Image source={getAppIconSource(preferences.appIcon)} style={styles.icon} />
+          <Image source={getAppIconSource()} style={styles.icon} />
         </Animated.View>
 
         <Animated.Text

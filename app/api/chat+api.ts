@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           error:
-            'Gemini API key is missing. Add GEMINI_API_KEY to your environment and restart Expo.',
+            'Server Gemini API keys are disabled. Add your Gemini API key in the app Settings screen.',
         },
         { status: 500 }
       );
@@ -327,12 +327,7 @@ function getRetrySeconds(message: string) {
 }
 
 function getGeminiKeys() {
-  const env = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env;
-
-  return [env?.GEMINI_API_KEY, env?.GEMINI_API_KEY_ALT, env?.GEMINI_ALT_API_KEY]
-    .map((key) => key?.trim())
-    .filter((key): key is string => Boolean(key));
+  return [];
 }
 
 function isQuotaError(message: string) {
@@ -341,10 +336,7 @@ function isQuotaError(message: string) {
 }
 
 function getGeminiModel() {
-  const model = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.GEMINI_MODEL;
-
-  return (model ?? DEFAULT_GEMINI_MODEL).replace(/^models\//, '');
+  return DEFAULT_GEMINI_MODEL;
 }
 
 function formatCurrentDateForAI() {
