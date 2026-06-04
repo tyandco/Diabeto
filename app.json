@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Diabeto"
+      "bundleIdentifier": "com.tyandco.diabeto",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
