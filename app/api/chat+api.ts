@@ -15,6 +15,7 @@ type GeminiResponse = {
         text?: string;
       }[];
     };
+    finishReason?: string;
   }[];
   error?: {
     message?: string;
@@ -70,9 +71,9 @@ const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 export async function POST(request: Request) {
   try {
-    const apiKey = getGeminiKey();
+    const apiKeys = getGeminiKeys();
 
-    if (!apiKey) {
+    if (apiKeys.length === 0) {
       return Response.json(
         {
           error:
@@ -90,36 +91,65 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Send at least one chat message.' }, { status: 400 });
     }
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${getGeminiModel()}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(buildGeminiRequest(messages, healthContext)),
+    const requestBody = JSON.stringify(buildGeminiRequest(messages, healthContext));
+    let lastError = 'Gemini could not answer right now.';
+    let lastStatus = 500;
+
+    for (const apiKey of apiKeys) {
+      const result = await fetchGemini(apiKey, requestBody);
+
+      if (result.ok) {
+        const text = extractText(result.data as GeminiResponse);
+        const finishReason = getFinishReason(result.data as GeminiResponse);
+
+        if (finishReason === 'MAX_TOKENS' || isLikelyIncompleteReply(text)) {
+          return Response.json({
+            reply: `${text}\n\n[Gemini may have cut this off. Send "continue" if you want the rest.]`,
+          });
+        }
+
+        if (finishReason && finishReason !== 'STOP') {
+          return Response.json({ reply: `${text}\n\n[Gemini stopped early: ${finishReason}]` });
+        }
+
+        return Response.json({ reply: text });
       }
-    );
 
-    const data = (await geminiResponse.json()) as GeminiResponse | GeminiErrorResponse;
+      lastError = result.data.error?.message ?? lastError;
+      lastStatus = result.status;
 
-    if (!geminiResponse.ok) {
-      const message = data.error?.message ?? 'Gemini could not answer right now.';
-
-      return Response.json(
-        { error: cleanGeminiError(message) },
-        { status: geminiResponse.status }
-      );
+      if (!isQuotaError(lastError)) {
+        break;
+      }
     }
 
-    return Response.json({ reply: extractText(data as GeminiResponse) });
+    return Response.json({ error: cleanGeminiError(lastError) }, { status: lastStatus });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Unexpected chatbot error.' },
       { status: 500 }
     );
   }
+}
+
+async function fetchGemini(apiKey: string, requestBody: string) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/${getGeminiModel()}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: requestBody,
+    }
+  );
+
+  return {
+    data: (await response.json()) as GeminiResponse | GeminiErrorResponse,
+    ok: response.ok,
+    status: response.status,
+  };
 }
 
 function buildGeminiRequest(messages: ClientMessage[], healthContext: string | null): GeminiRequest {
@@ -136,8 +166,9 @@ function buildGeminiRequest(messages: ClientMessage[], healthContext: string | n
     firstUserMessage.parts.unshift({
       text: [
         SYSTEM_PROMPT.trim(),
+        `Current date: ${formatCurrentDateForAI()}`,
         healthContext
-          ? `Provided health data:\n${healthContext}`
+          ? `Health: ${healthContext.slice(0, 500)}`
           : 'No health data was provided by the app yet.',
         'Use any attached image if present.',
       ].join('\n\n'),
@@ -147,7 +178,7 @@ function buildGeminiRequest(messages: ClientMessage[], healthContext: string | n
   return {
     contents,
     generationConfig: {
-      maxOutputTokens: 220,
+      maxOutputTokens: 260,
       temperature: 0.7,
     },
   };
@@ -201,7 +232,7 @@ function sanitizeHealthContext(healthContext: string | null | undefined) {
     return null;
   }
 
-  return String(healthContext).trim().slice(0, 1200) || null;
+  return String(healthContext).trim().slice(0, 500) || null;
 }
 
 function extractText(data: GeminiResponse) {
@@ -215,17 +246,98 @@ function extractText(data: GeminiResponse) {
   return text || 'I could not create a reply. Please try asking in a different way.';
 }
 
+function getFinishReason(data: GeminiResponse) {
+  return data.candidates?.[0]?.finishReason ?? null;
+}
+
+function isLikelyIncompleteReply(text: string) {
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  if (/[.!?)]$/.test(trimmed)) {
+    return false;
+  }
+
+  if (/['"`:,;(-]$/.test(trimmed)) {
+    return true;
+  }
+
+  const lastWord = trimmed.split(/\s+/).at(-1)?.toLowerCase().replace(/[^a-z]/g, '');
+  return Boolean(
+    lastWord &&
+      [
+        'a',
+        'an',
+        'and',
+        'are',
+        'as',
+        'but',
+        'for',
+        'from',
+        'if',
+        'in',
+        'into',
+        'is',
+        'of',
+        'or',
+        'that',
+        'the',
+        'to',
+        'what',
+        'whats',
+        'when',
+        'where',
+        'which',
+        'who',
+        'with',
+        'your',
+      ].includes(lastWord)
+  );
+}
+
 function cleanGeminiError(message: string) {
   if (message.toLowerCase().includes('quota')) {
-    return 'Gemini quota is not available for this model right now. Try again later or change GEMINI_MODEL in .env.';
+    const retrySeconds = getRetrySeconds(message);
+
+    if (retrySeconds) {
+      return `Gemini hit a short rate limit. Wait about ${retrySeconds} seconds, then send again.`;
+    }
+
+    if (message.toLowerCase().includes('limit: 0')) {
+      return 'Gemini has no free quota available for this model/key right now. Try again after the daily reset, enable billing, or switch API keys.';
+    }
+
+    return 'Gemini quota is not available right now. Wait a few minutes, then try again.';
   }
 
   return message;
 }
 
-function getGeminiKey() {
-  return (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.GEMINI_API_KEY;
+function getRetrySeconds(message: string) {
+  const match = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+
+  if (!match) {
+    return null;
+  }
+
+  return Math.ceil(Number(match[1]));
+}
+
+function getGeminiKeys() {
+  const env = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env;
+
+  return [env?.GEMINI_API_KEY, env?.GEMINI_API_KEY_ALT, env?.GEMINI_ALT_API_KEY]
+    .map((key) => key?.trim())
+    .filter((key): key is string => Boolean(key));
+}
+
+function isQuotaError(message: string) {
+  const lowerMessage = message.toLowerCase();
+  return lowerMessage.includes('quota') || lowerMessage.includes('rate limit');
 }
 
 function getGeminiModel() {
@@ -233,4 +345,15 @@ function getGeminiModel() {
     .process?.env?.GEMINI_MODEL;
 
   return (model ?? DEFAULT_GEMINI_MODEL).replace(/^models\//, '');
+}
+
+function formatCurrentDateForAI() {
+  return new Date().toLocaleString([], {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'long',
+    weekday: 'long',
+    year: 'numeric',
+  });
 }

@@ -1,29 +1,36 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { MarkdownText } from '@/components/markdown-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
+import { formatDailyLogHistoryForAI, loadDailyLogs } from '@/lib/daily-log';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
 
 const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
+const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 const ribbonImage = require('@/assets/images/ribbon.png');
 
 const starterMessages: ChatMessage[] = [
@@ -41,10 +48,15 @@ const quickPrompts = [
   'Healthy snack ideas',
 ];
 
-type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'>;
+type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'> & {
+  image?: Pick<ChatImage, 'fileName' | 'previewBase64' | 'previewMimeType' | 'uri'>;
+};
 
 export default function ChatScreen() {
   const isDark = useColorScheme() === 'dark';
+  const accent = useAccentPalette();
+  const preferences = useAppPreferences();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const healthContext = useHealthContext();
   const healthSummary = formatHealthContext(healthContext);
@@ -52,6 +64,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [attachedImage, setAttachedImage] = useState<ChatImage | null>(null);
   const [draft, setDraft] = useState('');
+  const [dailyLogContext, setDailyLogContext] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
@@ -64,7 +77,19 @@ export default function ChatScreen() {
         const storedMessages = JSON.parse(value) as StoredMessage[];
 
         if (storedMessages.length > 0) {
-          setMessages(storedMessages);
+          setMessages(
+            storedMessages.map((message) => ({
+              ...message,
+              image: message.image
+                ? {
+                    ...message.image,
+                    base64: '',
+                    mimeType: message.image.previewMimeType ?? 'image/jpeg',
+                    uri: getPreviewUri(message.image),
+                  }
+                : undefined,
+            }))
+          );
         }
       })
       .catch(() => undefined);
@@ -76,6 +101,14 @@ export default function ChatScreen() {
       .slice(-30)
       .map<StoredMessage>((message) => ({
         id: message.id,
+        image: message.image?.previewBase64
+          ? {
+              fileName: message.image.fileName,
+              previewBase64: message.image.previewBase64,
+              previewMimeType: message.image.previewMimeType ?? 'image/jpeg',
+              uri: message.image.uri,
+            }
+          : undefined,
         role: message.role,
         text: message.text,
       }));
@@ -87,7 +120,18 @@ export default function ChatScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages, isSending, attachedImage]);
 
+  useEffect(() => {
+    loadDailyLogs(7)
+      .then((entries) => setDailyLogContext(formatDailyLogHistoryForAI(entries)))
+      .catch(() => undefined);
+  }, [messages.length]);
+
   const chooseAttachmentSource = () => {
+    if (Platform.OS === 'web') {
+      pickImage();
+      return;
+    }
+
     Alert.alert('Attach image', 'Choose where the image should come from.', [
       { text: 'Take photo', onPress: takePhoto },
       { text: 'Choose photo', onPress: pickImage },
@@ -105,9 +149,9 @@ export default function ChatScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
-      base64: true,
+      base64: false,
       mediaTypes: ['images'],
-      quality: 0.6,
+      quality: 0.5,
     });
 
     handleImageResult(result);
@@ -123,35 +167,42 @@ export default function ChatScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: false,
-      base64: true,
+      base64: false,
       mediaTypes: ['images'],
-      quality: 0.6,
+      quality: 0.5,
     });
 
     handleImageResult(result);
   };
 
-  const handleImageResult = (result: ImagePicker.ImagePickerResult) => {
+  const handleImageResult = async (result: ImagePicker.ImagePickerResult) => {
     if (result.canceled) {
       return;
     }
 
     const asset = result.assets[0];
 
-    if (!asset.base64) {
-      addBotMessage('I could not read that image. Please choose a different photo.');
-      return;
-    }
-
     if (asset.fileSize && asset.fileSize > 4_000_000) {
       addBotMessage('That image is too large. Please choose a smaller photo.');
       return;
     }
 
+    const [chatImage, preview] = await Promise.all([
+      createCompressedImage(asset.uri, 640, 0.48),
+      createCompressedImage(asset.uri, 320, 0.5),
+    ]);
+
+    if (!chatImage) {
+      addBotMessage('I could not process that image. Please choose a different photo.');
+      return;
+    }
+
     setAttachedImage({
-      base64: asset.base64,
+      base64: chatImage.base64,
       fileName: asset.fileName,
-      mimeType: asset.mimeType ?? 'image/jpeg',
+      mimeType: chatImage.mimeType,
+      previewBase64: preview?.base64,
+      previewMimeType: preview?.mimeType,
       uri: asset.uri,
     });
   };
@@ -160,6 +211,11 @@ export default function ChatScreen() {
     const trimmed = (overrideText ?? draft).trim();
 
     if ((!trimmed && !attachedImage) || isSending) {
+      return;
+    }
+
+    if (!preferences.geminiApiKey.trim()) {
+      addBotMessage('Add your Gemini API key in Settings before chatting with Ribbon.');
       return;
     }
 
@@ -178,7 +234,13 @@ export default function ChatScreen() {
     setIsSending(true);
 
     try {
-      const reply = await sendDiabetoChat(nextMessages, healthSummary);
+      const reply = await sendDiabetoChat(
+        nextMessages,
+        healthSummary,
+        preferences.ribbonTone,
+        dailyLogContext,
+        preferences.geminiApiKey
+      );
       addMessage({
         id: `bot-${Date.now()}`,
         role: 'bot',
@@ -236,10 +298,37 @@ export default function ChatScreen() {
           </View>
           <View style={[styles.contextPill, isDark && styles.contextPillDark]}>
             <ThemedText style={[styles.contextText, isDark && styles.contextTextDark]}>
-              {healthSummary ? 'Using Predict data and chat memory' : 'Using chat memory only'}
+              {!preferences.geminiApiKey.trim()
+                ? 'Gemini API key needed'
+                : healthSummary || dailyLogContext
+                  ? 'Using Predict data, daily logs, and chat memory'
+                  : 'Using chat memory only'}
             </ThemedText>
           </View>
         </View>
+
+        {!preferences.geminiApiKey.trim() ? (
+          <View style={[styles.keyPanel, isDark && styles.keyPanelDark]}>
+            <ThemedText type="defaultSemiBold">Ribbon needs your Gemini API key.</ThemedText>
+            <ThemedText style={[styles.keyPanelText, isDark && styles.mutedDark]}>
+              Create a key in Google AI Studio, copy it, then paste it in Settings.
+            </ThemedText>
+            <View style={styles.keyPanelActions}>
+              <Pressable
+                onPress={() => Linking.openURL(GOOGLE_AI_STUDIO_KEY_URL)}
+                style={[styles.keyPanelButton, { borderColor: accent.primary }]}>
+                <ThemedText style={[styles.keyPanelButtonText, { color: accent.primary }]}>
+                  Get an API key
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/(tabs)/settings')}
+                style={[styles.keyPanelButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
+                <ThemedText style={styles.keyPanelPrimaryText}>Open Settings</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
 
         <ScrollView
           ref={scrollRef}
@@ -304,7 +393,7 @@ export default function ChatScreen() {
                 onPress={chooseAttachmentSource}
                 style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
                 <IconSymbol
-                  color={BrandColors.primary}
+                  color={accent.primary}
                   name="paperclip"
                   size={17}
                   weight="semibold"
@@ -312,9 +401,13 @@ export default function ChatScreen() {
                 <ThemedText style={styles.attachText}>Attach</ThemedText>
               </Pressable>
               <Pressable
-                disabled={isSending}
+                disabled={isSending || !preferences.geminiApiKey.trim()}
                 onPress={() => sendMessage()}
-                style={[styles.sendButton, isSending && styles.sendButtonDisabled]}>
+                style={[
+                  styles.sendButton,
+                  { backgroundColor: accent.primary },
+                  (isSending || !preferences.geminiApiKey.trim()) && styles.sendButtonDisabled,
+                ]}>
                 <IconSymbol
                   color="#ffffff"
                   name="paperplane.fill"
@@ -373,13 +466,47 @@ function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDa
           !isUser && isDark && styles.botBubbleDark,
         ]}>
         {!isUser ? <ThemedText style={[styles.senderLabel, isDark && styles.mutedDark]}>Ribbon</ThemedText> : null}
-        {message.image ? <Image source={{ uri: message.image.uri }} style={styles.messageImage} /> : null}
-        <ThemedText style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}>
-          {message.text}
-        </ThemedText>
+        {message.image ? <Image source={{ uri: getPreviewUri(message.image) }} style={styles.messageImage} /> : null}
+        <MarkdownText
+          isDark={isDark}
+          style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}
+          text={message.text}
+        />
       </View>
     </Animated.View>
   );
+}
+
+async function createCompressedImage(uri: string, width: number, compress: number) {
+  try {
+    const context = ImageManipulator.ImageManipulator.manipulate(uri);
+    context.resize({ width });
+    const rendered = await context.renderAsync();
+    const result = await rendered.saveAsync({
+      base64: true,
+      compress,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+
+    if (!result.base64) {
+      return null;
+    }
+
+    return {
+      base64: result.base64,
+      mimeType: 'image/jpeg',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getPreviewUri(image: Pick<ChatImage, 'previewBase64' | 'previewMimeType' | 'uri'>) {
+  if (image.previewBase64) {
+    return `data:${image.previewMimeType ?? 'image/jpeg'};base64,${image.previewBase64}`;
+  }
+
+  return image.uri;
 }
 
 function TypingBubble({ isDark }: { isDark: boolean }) {
@@ -602,6 +729,43 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.darkBackground,
     borderColor: BrandColors.darkBorder,
     color: BrandColors.darkInputText,
+  },
+  keyPanel: {
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14,
+  },
+  keyPanelActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  keyPanelButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    minWidth: 130,
+    paddingHorizontal: 14,
+  },
+  keyPanelButtonText: {
+    fontWeight: '900',
+  },
+  keyPanelDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
+  },
+  keyPanelPrimaryText: {
+    color: '#ffffff',
+    fontWeight: '900',
+  },
+  keyPanelText: {
+    color: BrandColors.lightMutedText,
   },
   attachmentPreview: {
     alignItems: 'center',

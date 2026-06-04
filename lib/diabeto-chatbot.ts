@@ -1,6 +1,10 @@
+import { getRibbonToneInstruction, type RibbonTone } from '@/lib/app-preferences';
+
 export type ChatImage = {
   base64: string;
   mimeType: string;
+  previewBase64?: string;
+  previewMimeType?: string;
   uri: string;
   fileName?: string | null;
 };
@@ -19,6 +23,7 @@ type GeminiResponse = {
         text?: string;
       }[];
     };
+    finishReason?: string;
   }[];
   error?: {
     message?: string;
@@ -65,18 +70,50 @@ Keep replies clear and under 120 words unless the user asks for a full meal plan
 `;
 
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
-const EXPO_PUBLIC_GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const EXPO_PUBLIC_GEMINI_MODEL = process.env.EXPO_PUBLIC_GEMINI_MODEL;
 
-export async function sendDiabetoChat(messages: ChatMessage[], healthContext?: string | null) {
-  const apiKey = EXPO_PUBLIC_GEMINI_API_KEY?.trim();
+export async function sendDiabetoChat(
+  messages: ChatMessage[],
+  healthContext?: string | null,
+  ribbonTone: RibbonTone = 'warm',
+  dailyLogContext?: string | null,
+  geminiApiKey?: string | null
+) {
+  const apiKey = geminiApiKey?.trim();
 
   if (!apiKey) {
     throw new Error(
-      'Gemini API key is missing. Add EXPO_PUBLIC_GEMINI_API_KEY to .env and restart Expo.'
+      'Add your Gemini API key in Settings before chatting with Ribbon.'
     );
   }
 
+  const requestBody = JSON.stringify(
+    buildGeminiRequest(messages, healthContext ?? null, ribbonTone, dailyLogContext ?? null)
+  );
+  let lastError = 'Gemini could not answer right now.';
+
+  const result = await fetchGemini(apiKey, requestBody);
+
+  if (result.ok) {
+    const text = extractText(result.data);
+    const finishReason = getFinishReason(result.data);
+
+    if (finishReason === 'MAX_TOKENS' || isLikelyIncompleteReply(text)) {
+      return `${text}\n\n[Gemini may have cut this off. Send "continue" if you want the rest.]`;
+    }
+
+    if (finishReason && finishReason !== 'STOP') {
+      return `${text}\n\n[Gemini stopped early: ${finishReason}]`;
+    }
+
+    return text;
+  }
+
+  lastError = result.data.error?.message ?? lastError;
+  throw new Error(cleanGeminiError(lastError));
+}
+
+async function fetchGemini(apiKey: string, requestBody: string) {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/${getGeminiModel()}:generateContent`,
     {
@@ -85,22 +122,24 @@ export async function sendDiabetoChat(messages: ChatMessage[], healthContext?: s
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,
       },
-      body: JSON.stringify(buildGeminiRequest(messages, healthContext ?? null)),
+      body: requestBody,
     }
   );
 
-  const data = (await response.json()) as GeminiResponse;
-
-  if (!response.ok) {
-    throw new Error(cleanGeminiError(data.error?.message ?? 'Gemini could not answer right now.'));
-  }
-
-  return extractText(data);
+  return {
+    data: (await response.json()) as GeminiResponse,
+    ok: response.ok,
+  };
 }
 
-function buildGeminiRequest(messages: ChatMessage[], healthContext: string | null): GeminiRequest {
+function buildGeminiRequest(
+  messages: ChatMessage[],
+  healthContext: string | null,
+  ribbonTone: RibbonTone,
+  dailyLogContext: string | null
+): GeminiRequest {
   const firstUserIndex = messages.findIndex((message) => message.role === 'user');
-  const relevantMessages = (firstUserIndex >= 0 ? messages.slice(firstUserIndex) : messages).slice(-12);
+  const relevantMessages = (firstUserIndex >= 0 ? messages.slice(firstUserIndex) : messages).slice(-8);
 
   const contents = relevantMessages
     .filter((message) => message.role === 'user' || message.role === 'bot')
@@ -116,9 +155,14 @@ function buildGeminiRequest(messages: ChatMessage[], healthContext: string | nul
     firstUserMessage.parts.unshift({
       text: [
         SYSTEM_PROMPT.trim(),
+        getRibbonToneInstruction(ribbonTone),
+        `Current date: ${formatCurrentDateForAI()}`,
         healthContext
-          ? `Provided health data:\n${healthContext.trim().slice(0, 1200)}`
+          ? `Health: ${healthContext.trim().slice(0, 500)}`
           : 'No health data was provided by the app yet.',
+        dailyLogContext
+          ? `Recent logs:\n${dailyLogContext.trim().slice(0, 700)}`
+          : 'No daily log history was provided by the app yet.',
         'Use any attached image if present.',
       ].join('\n\n'),
     });
@@ -127,7 +171,7 @@ function buildGeminiRequest(messages: ChatMessage[], healthContext: string | nul
   return {
     contents,
     generationConfig: {
-      maxOutputTokens: 220,
+      maxOutputTokens: 260,
       temperature: 0.7,
     },
   };
@@ -164,18 +208,106 @@ function extractText(data: GeminiResponse) {
   return text;
 }
 
+function getFinishReason(data: GeminiResponse) {
+  return data.candidates?.[0]?.finishReason ?? null;
+}
+
+function isLikelyIncompleteReply(text: string) {
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  if (/[.!?)]$/.test(trimmed)) {
+    return false;
+  }
+
+  if (/['"`:,;(-]$/.test(trimmed)) {
+    return true;
+  }
+
+  const lastWord = trimmed.split(/\s+/).at(-1)?.toLowerCase().replace(/[^a-z]/g, '');
+  return Boolean(
+    lastWord &&
+      [
+        'a',
+        'an',
+        'and',
+        'are',
+        'as',
+        'but',
+        'for',
+        'from',
+        'if',
+        'in',
+        'into',
+        'is',
+        'of',
+        'or',
+        'that',
+        'the',
+        'to',
+        'what',
+        'whats',
+        'when',
+        'where',
+        'which',
+        'who',
+        'with',
+        'your',
+      ].includes(lastWord)
+  );
+}
+
 function cleanGeminiError(message: string) {
   if (message.toLowerCase().includes('api key not valid')) {
     return 'Gemini says this API key is not valid. Check EXPO_PUBLIC_GEMINI_API_KEY in .env, then restart Expo.';
   }
 
   if (message.toLowerCase().includes('quota')) {
-    return 'Gemini quota is not available for this model right now. Try again later or change EXPO_PUBLIC_GEMINI_MODEL in .env.';
+    const retrySeconds = getRetrySeconds(message);
+
+    if (retrySeconds) {
+      return `Gemini hit a short rate limit. Wait about ${retrySeconds} seconds, then send again.`;
+    }
+
+    if (message.toLowerCase().includes('limit: 0')) {
+      return 'Gemini has no free quota available for this model/key right now. Try again after the daily reset, enable billing, or switch API keys.';
+    }
+
+    return 'Gemini quota is not available right now. Wait a few minutes, then try again.';
   }
 
   return message;
 }
 
+function isQuotaError(message: string) {
+  const lowerMessage = message.toLowerCase();
+  return lowerMessage.includes('quota') || lowerMessage.includes('rate limit');
+}
+
+function getRetrySeconds(message: string) {
+  const match = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+
+  if (!match) {
+    return null;
+  }
+
+  return Math.ceil(Number(match[1]));
+}
+
 function getGeminiModel() {
   return (EXPO_PUBLIC_GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL).replace(/^models\//, '');
+}
+
+function formatCurrentDateForAI() {
+  return new Date().toLocaleString([], {
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: 'long',
+    weekday: 'long',
+    year: 'numeric',
+  });
 }

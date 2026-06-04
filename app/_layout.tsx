@@ -6,37 +6,37 @@ import 'react-native-reanimated';
 import { AppIntroSplash } from '@/components/app-intro-splash';
 import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAccentPalette } from '@/lib/app-preferences';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-const lightTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: BrandColors.primary,
-    background: BrandColors.lightBackground,
-    card: BrandColors.lightBackground,
-    border: BrandColors.lightBorder,
-    text: '#11181C',
-  },
-};
-
-const darkTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: BrandColors.primary,
-    background: BrandColors.darkBackground,
-    card: BrandColors.darkSurface,
-    border: BrandColors.darkBorder,
-    text: '#ECEDEE',
-  },
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const accent = useAccentPalette();
+  const lightTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: accent.primary,
+      background: BrandColors.lightBackground,
+      card: BrandColors.lightBackground,
+      border: BrandColors.lightBorder,
+      text: '#11181C',
+    },
+  };
+  const darkTheme = {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      primary: accent.primary,
+      background: BrandColors.darkBackground,
+      card: BrandColors.darkSurface,
+      border: BrandColors.darkBorder,
+      text: '#ECEDEE',
+    },
+  };
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>

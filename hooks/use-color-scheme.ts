@@ -1,1 +1,1 @@
-export { useColorScheme } from 'react-native';
+export { useEffectiveColorScheme as useColorScheme } from '@/lib/app-preferences';

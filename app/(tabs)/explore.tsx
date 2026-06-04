@@ -1,8 +1,9 @@
-import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors, Layout } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const mealIdeas = [
   'Breakfast: oats with berries, plain yogurt, and nuts.',

@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  useColorScheme,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
 
@@ -379,6 +379,8 @@ function RibbonPage({ isDark }: { isDark: boolean }) {
         items={[
           'Uses your saved health details when you chat',
           'Can review food or drink images you attach',
+          'Requires your own Gemini API key from Google AI Studio',
+          'Paste the key in Settings before using chat',
           'Keeps advice educational, supportive, and practical',
         ]}
       />

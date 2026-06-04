@@ -51,18 +51,16 @@ export function formatHealthContext(context: HealthContext | null) {
   const { profile, prediction } = context;
 
   return [
-    `Age: ${profile.age}`,
-    `Height: ${profile.heightCm} cm`,
-    `Weight: ${profile.weightKg} kg`,
-    `BMI: ${prediction.bmi}`,
-    `Can measure glucose now: ${profile.canMeasureGlucose ? 'yes' : 'no'}`,
-    `Glucose: ${typeof profile.glucoseMgDl === 'number' ? `${profile.glucoseMgDl} mg/dL` : 'not provided'}`,
-    `Family history: ${profile.familyHistory ? 'yes' : 'no'}`,
-    `Activity level: ${profile.activityLevel}`,
-    `Sugary drinks: ${profile.sugaryDrinks}`,
-    `Predicted risk: ${prediction.riskLevel}`,
-    `Risk score: ${prediction.score}/100`,
-  ].join('\n');
+    `age=${profile.age}`,
+    `ht=${profile.heightCm}cm`,
+    `wt=${profile.weightKg}kg`,
+    `bmi=${prediction.bmi}`,
+    `glu=${typeof profile.glucoseMgDl === 'number' ? `${profile.glucoseMgDl}mg/dL` : 'na'}`,
+    `famHx=${profile.familyHistory ? 'y' : 'n'}`,
+    `act=${profile.activityLevel}`,
+    `sugary=${profile.sugaryDrinks}`,
+    `risk=${prediction.riskLevel}:${prediction.score}/100`,
+  ].join('; ');
 }
 
 function subscribe(listener: () => void) {

@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 
 import { BrandColors, Fonts } from '@/constants/theme';
+import { getAppIconSource, useAppPreferences } from '@/lib/app-preferences';
 
 type AppIntroSplashProps = {
   isDark: boolean;
 };
 
 export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
+  const preferences = useAppPreferences();
   const [isVisible, setIsVisible] = useState(true);
   const iconOpacity = useRef(new Animated.Value(0)).current;
-  const iconScale = useRef(new Animated.Value(0.84)).current;
+  const iconScale = useRef(new Animated.Value(0.72)).current;
   const smallTextOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleTranslate = useRef(new Animated.Value(12)).current;
@@ -26,9 +28,9 @@ export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
           useNativeDriver: true,
         }),
         Animated.spring(iconScale, {
-          damping: 14,
+          damping: 15,
           mass: 0.8,
-          stiffness: 130,
+          stiffness: 120,
           toValue: 1,
           useNativeDriver: true,
         }),
@@ -79,7 +81,6 @@ export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
 
   return (
     <Animated.View
-      pointerEvents="none"
       style={[
         styles.overlay,
         { backgroundColor: isDark ? BrandColors.darkBackground : BrandColors.lightBackground },
@@ -89,13 +90,12 @@ export function AppIntroSplash({ isDark }: AppIntroSplashProps) {
         <Animated.View
           style={[
             styles.iconShell,
-            isDark && styles.iconShellDark,
             {
               opacity: iconOpacity,
               transform: [{ scale: iconScale }],
             },
           ]}>
-          <Image source={require('@/assets/images/icon.png')} style={styles.icon} />
+          <Image source={getAppIconSource(preferences.appIcon)} style={styles.icon} />
         </Animated.View>
 
         <Animated.Text
@@ -129,35 +129,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: {
-    borderRadius: 24,
-    height: 86,
-    width: 86,
+    borderRadius: 34,
+    height: 146,
+    width: 146,
   },
   iconShell: {
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 32,
-    borderWidth: 1,
-    elevation: 7,
-    height: 108,
+    height: 158,
     justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: BrandColors.primary,
-    shadowOffset: { height: 12, width: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    width: 108,
-  },
-  iconShellDark: {
-    backgroundColor: BrandColors.darkSurface,
-    borderColor: BrandColors.darkBorder,
-    shadowOpacity: 0.28,
+    marginBottom: 14,
+    width: 158,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    pointerEvents: 'none',
     zIndex: 1000,
   },
   title: {
