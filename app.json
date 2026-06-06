@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tyandco.diabeto",
-      "buildNumber": "3"
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
