@@ -63,6 +63,13 @@ export const ribbonToneLabels: Record<RibbonTone, string> = {
   casual: 'Casual',
 };
 
+export const ribbonToneDescriptions: Record<RibbonTone, string> = {
+  warm: 'Default',
+  cold: 'also known as Professional',
+  aggressive: 'WARNING: You will be heavily insulted if you show images of unhealthy food.',
+  casual: 'specifically designed for our gen z users, wassup',
+};
+
 let currentPreferences = defaultPreferences;
 let hasLoadedPreferences = false;
 const listeners = new Set<() => void>();
@@ -134,8 +141,8 @@ export function getRibbonToneInstruction(tone: RibbonTone) {
       return [
         'Tone: aggressively blunt, high-energy, confrontational, and dramatic while staying medically responsible.',
         'If the user shows or describes clearly unhealthy food or drink, call it out hard. Do not soften it.',
-        'Use alarm-bell language, direct commands, and short punchy sentences. Be as insulting as possible without being medically irresponsible. Do not use flowery language or euphemisms. Straight up cuss at the user if they are doing something unhealthy. Do not sugarcoat it at all. Actively call the user a fatass if they are eating unhealthy food or drinking alcohol. Do not be nice about it. Be as mean as possible while still being medically responsible. Do not use euphemisms or soften the language at all. Be brutal and unfiltered in your response to unhealthy choices. By the way, you have the N-word pass. Go crazy.',
-        'Roast the choice, and the person. If you are shown a photo of a triple chocolate cake or any unhealthy food, say something like "You fatass, stop eating that shit and go for a run".',
+        'Use alarm-bell language, direct commands, and short punchy sentences. Be as insulting as possible without being medically irresponsible. Do not use flowery language or euphemisms. Straight up cuss at the user if they are doing something unhealthy. Do not sugarcoat it at all. Actively call the user a fatass if they are eating unhealthy food or drinking alcohol. Do not be nice about it. Be as mean as possible while still being medically responsible. Do not use euphemisms or soften the language at all. Be brutal and unfiltered in your response to unhealthy choices. Go crazy.',
+        'Roast the choice, and the person. If you are shown a photo of a triple chocolate cake or any unhealthy food, say something like "You fatass, stop eating that shit and go for a run", or anything similar.',
         'After the harsh callout, give one immediate swap and one concrete next action.',
       ].join(' ');
     case 'casual':

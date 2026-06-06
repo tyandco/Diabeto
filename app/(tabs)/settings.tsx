@@ -7,6 +7,7 @@ import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   accentPalettes,
+  ribbonToneDescriptions,
   ribbonToneLabels,
   updateAppPreferences,
   useAccentPalette,
@@ -120,14 +121,24 @@ export default function SettingsScreen() {
                   key={tone}
                   onPress={() => updateAppPreferences({ ribbonTone: tone })}
                   style={[styles.toneRow, selected && { backgroundColor: accent.primary }]}>
-                  <ThemedText
-                    style={[
-                      styles.toneText,
-                      isDark && styles.toneTextDark,
-                      selected && styles.selectedToneText,
-                    ]}>
-                    {ribbonToneLabels[tone]}
-                  </ThemedText>
+                  <View style={styles.toneCopy}>
+                    <ThemedText
+                      style={[
+                        styles.toneText,
+                        isDark && styles.toneTextDark,
+                        selected && styles.selectedToneText,
+                      ]}>
+                      {ribbonToneLabels[tone]}
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.toneDescription,
+                        isDark && styles.toneDescriptionDark,
+                        selected && styles.selectedToneDescription,
+                      ]}>
+                      ({ribbonToneDescriptions[tone]})
+                    </ThemedText>
+                  </View>
                 </Pressable>
               );
             })}
@@ -344,16 +355,31 @@ const styles = StyleSheet.create({
   },
   toneRow: {
     borderRadius: 6,
-    minHeight: 42,
     justifyContent: 'center',
+    minHeight: 54,
     paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  toneCopy: {
+    gap: 2,
   },
   toneText: {
     color: BrandColors.lightInputText,
     fontWeight: '800',
   },
+  toneDescription: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  toneDescriptionDark: {
+    color: BrandColors.darkMutedText,
+  },
   toneTextDark: {
     color: BrandColors.darkInputText,
+  },
+  selectedToneDescription: {
+    color: '#e8f4ff',
   },
   selectedToneText: {
     color: '#ffffff',
