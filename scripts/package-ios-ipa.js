@@ -17,8 +17,11 @@ const outPath = process.env.DIABETO_IPA_OUT
   : path.join(root, "outputs/Diabeto-latest.ipa");
 
 const bundleId = process.env.DIABETO_BUNDLE_ID || "com.tyandco.diabeto";
-const buildNumber = process.env.DIABETO_BUILD_NUMBER || "2";
-const version = process.env.DIABETO_VERSION || "1.0.0";
+const appJson = JSON.parse(fs.readFileSync(path.join(root, "app.json"), "utf8"));
+const expoConfig = appJson.expo || {};
+const buildNumber =
+  process.env.DIABETO_BUILD_NUMBER || expoConfig.ios?.buildNumber || "1";
+const version = process.env.DIABETO_VERSION || expoConfig.version || "1.0.1";
 
 if (!fs.existsSync(appPath)) {
   console.error(`Missing app bundle: ${appPath}`);
@@ -43,12 +46,17 @@ function run(command, args, options = {}) {
 function plistBuddy(...commands) {
   const plist = path.join(appCopy, "Info.plist");
   for (const command of commands) {
+    run("/usr/libexec/PlistBuddy", ["-c", command, plist]);
+  }
+}
+
+function plistBuddyOptional(...commands) {
+  const plist = path.join(appCopy, "Info.plist");
+  for (const command of commands) {
     try {
       run("/usr/libexec/PlistBuddy", ["-c", command, plist]);
-    } catch (error) {
-      if (!command.startsWith("Set :CFBundleURLTypes")) {
-        throw error;
-      }
+    } catch {
+      // Optional plist cleanup commands can fail when the source plist shape changes.
     }
   }
 }
@@ -70,7 +78,12 @@ plistBuddy(
   `Set :CFBundleIdentifier ${bundleId}`,
   `Set :CFBundleVersion ${buildNumber}`,
   `Set :CFBundleShortVersionString ${version}`,
-  `Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 ${bundleId}`,
+);
+plistBuddyOptional(
+  "Delete :CFBundleURLTypes:0:CFBundleURLSchemes",
+  "Add :CFBundleURLTypes:0:CFBundleURLSchemes array",
+  "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string diabeto",
+  `Add :CFBundleURLTypes:0:CFBundleURLSchemes:1 string ${bundleId}`,
 );
 
 const appConfigPath = path.join(appCopy, "EXConstants.bundle/app.config");
