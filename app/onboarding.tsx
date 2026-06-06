@@ -19,9 +19,12 @@ import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
+import { markOnboardingComplete } from '@/lib/onboarding-status';
 
 const appIconImage = require('@/assets/images/icon.png');
 const ribbonImage = require('@/assets/images/ribbon.png');
+const ribbonPalmImage = require('@/assets/images/ribbon_right_palm.png');
+const ribbonSmilingImage = require('@/assets/images/ribbon_smiling_eyesclosed.png');
 
 type FormState = {
   age: string;
@@ -105,6 +108,7 @@ export default function OnboardingScreen() {
       profile,
       prediction: predictDiabetesRisk(profile),
     });
+    await markOnboardingComplete();
 
     router.replace('/(tabs)');
   };
@@ -362,10 +366,233 @@ function GlucosePage({
 }
 
 function RibbonPage({ isDark }: { isDark: boolean }) {
+  const headTilt = useRef(new Animated.Value(0)).current;
+  const handBob = useRef(new Animated.Value(0)).current;
+  const handOpacity = useRef(new Animated.Value(0)).current;
+  const handRotate = useRef(new Animated.Value(0)).current;
+  const handTranslateY = useRef(new Animated.Value(44)).current;
+  const [isSmiling, setIsSmiling] = useState(false);
+
+  useEffect(() => {
+    headTilt.setValue(0);
+    handBob.setValue(0);
+    handOpacity.setValue(0);
+    handRotate.setValue(0);
+    handTranslateY.setValue(44);
+    setIsSmiling(false);
+
+    const wave = Animated.sequence([
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 95,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -4,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 95,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -1,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 120,
+          easing: Easing.inOut(Easing.sin),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 120,
+          easing: Easing.inOut(Easing.sin),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 105,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -3,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 105,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -1,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 115,
+          easing: Easing.inOut(Easing.sin),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 115,
+          easing: Easing.inOut(Easing.sin),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 105,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -2,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 105,
+          easing: Easing.inOut(Easing.sin),
+          toValue: -0.7,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(handBob, {
+          duration: 170,
+          easing: Easing.out(Easing.sin),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handRotate, {
+          duration: 170,
+          easing: Easing.out(Easing.sin),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
+
+    const animation = Animated.sequence([
+      Animated.delay(360),
+      Animated.timing(headTilt, {
+        duration: 360,
+        easing: Easing.out(Easing.cubic),
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.delay(140),
+      Animated.parallel([
+        Animated.timing(handOpacity, {
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handTranslateY, {
+          duration: 320,
+          easing: Easing.out(Easing.back(1.2)),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+      wave,
+      Animated.parallel([
+        Animated.timing(handOpacity, {
+          duration: 220,
+          easing: Easing.in(Easing.cubic),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handTranslateY, {
+          duration: 260,
+          easing: Easing.in(Easing.cubic),
+          toValue: 44,
+          useNativeDriver: true,
+        }),
+        Animated.timing(handBob, {
+          duration: 260,
+          easing: Easing.in(Easing.cubic),
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(120),
+      Animated.timing(headTilt, {
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const smileTimer = setTimeout(() => setIsSmiling(true), 360);
+    animation.start(({ finished }) => {
+      if (finished) {
+        setIsSmiling(false);
+      }
+    });
+
+    return () => {
+      clearTimeout(smileTimer);
+      animation.stop();
+      setIsSmiling(false);
+    };
+  }, [handBob, handOpacity, handRotate, handTranslateY, headTilt]);
+
+  const mascotRotate = headTilt.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '-5deg'],
+  });
+  const mascotTranslateX = headTilt.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -7],
+  });
+  const mascotTranslateY = headTilt.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -3],
+  });
+  const palmRotate = handRotate.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-8deg', '0deg', '7deg'],
+  });
+  const palmTranslateX = handRotate.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-4, 0, 4],
+  });
+
   return (
     <View style={styles.page}>
       <View style={styles.mascotMark}>
-        <Image source={ribbonImage} style={styles.mascotImage} />
+        <Animated.View
+          style={[
+            styles.mascotHead,
+            {
+              transform: [
+                { translateX: mascotTranslateX },
+                { translateY: mascotTranslateY },
+                { rotate: mascotRotate },
+              ],
+            },
+          ]}>
+          <Image
+            resizeMode="contain"
+            source={isSmiling ? ribbonSmilingImage : ribbonImage}
+            style={styles.mascotImage}
+          />
+        </Animated.View>
+        <Animated.Image
+          accessibilityIgnoresInvertColors
+          resizeMode="contain"
+          source={ribbonPalmImage}
+          style={[
+            styles.mascotPalm,
+            {
+              opacity: handOpacity,
+              transform: [
+                { translateX: palmTranslateX },
+                { translateY: handTranslateY },
+                { translateY: handBob },
+                { rotate: palmRotate },
+              ],
+            },
+          ]}
+        />
       </View>
       <ThemedText type="title" style={styles.title}>
         Meet Ribbon
@@ -628,13 +855,25 @@ const styles = StyleSheet.create({
     height: 172,
     width: 172,
   },
+  mascotHead: {
+    height: 172,
+    width: 172,
+  },
   mascotMark: {
     alignItems: 'center',
     alignSelf: 'center',
-    height: 172,
+    height: 192,
     justifyContent: 'center',
     marginBottom: -2,
-    width: 172,
+    overflow: 'visible',
+    width: 204,
+  },
+  mascotPalm: {
+    bottom: 7,
+    height: 58,
+    position: 'absolute',
+    right: 4,
+    width: 58,
   },
   title: {
     color: BrandColors.primary,
