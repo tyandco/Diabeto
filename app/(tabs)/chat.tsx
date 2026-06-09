@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -28,25 +28,11 @@ import { useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
 import { formatDailyLogHistoryForAI, loadDailyLogs } from '@/lib/daily-log';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
+import { useI18n } from '@/lib/localization';
 
 const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 const ribbonImage = require('@/assets/images/ribbon.png');
-
-const starterMessages: ChatMessage[] = [
-  {
-    id: 'welcome',
-    role: 'bot',
-    text: 'Hi, I am Ribbon. I can help you plan balanced meals, understand food choices, review images, and build habits that lower diabetes risk.',
-  },
-];
-
-const quickPrompts = [
-  'Suggest breakfast',
-  'Suggest lunch',
-  'Suggest dinner',
-  'Healthy snack ideas',
-];
 
 type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'> & {
   image?: Pick<ChatImage, 'fileName' | 'previewBase64' | 'previewMimeType' | 'uri'>;
@@ -56,16 +42,37 @@ export default function ChatScreen() {
   const isDark = useColorScheme() === 'dark';
   const accent = useAccentPalette();
   const preferences = useAppPreferences();
+  const { language, text } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const healthContext = useHealthContext();
   const healthSummary = formatHealthContext(healthContext);
   const scrollRef = useRef<ScrollView>(null);
+  const starterMessages = useMemo<ChatMessage[]>(
+    () => [
+      {
+        id: 'welcome',
+        role: 'bot',
+        text: text.chat.starter,
+      },
+    ],
+    [text.chat.starter]
+  );
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [attachedImage, setAttachedImage] = useState<ChatImage | null>(null);
   const [draft, setDraft] = useState('');
   const [dailyLogContext, setDailyLogContext] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    setMessages((current) =>
+      current.length === 1 && current[0]?.id === 'welcome'
+        ? starterMessages
+        : current.map((message) =>
+            message.id === 'welcome' ? { ...message, text: text.chat.starter } : message
+          )
+    );
+  }, [starterMessages, text.chat.starter]);
 
   useEffect(() => {
     AsyncStorage.getItem(CHAT_MEMORY_KEY)
@@ -132,10 +139,10 @@ export default function ChatScreen() {
       return;
     }
 
-    Alert.alert('Attach image', 'Choose where the image should come from.', [
-      { text: 'Take photo', onPress: takePhoto },
-      { text: 'Choose photo', onPress: pickImage },
-      { style: 'cancel', text: 'Cancel' },
+    Alert.alert(text.chat.attachImage, text.chat.attachImageMessage, [
+      { text: text.chat.takePhoto, onPress: takePhoto },
+      { text: text.chat.choosePhoto, onPress: pickImage },
+      { style: 'cancel', text: text.common.cancel },
     ]);
   };
 
@@ -143,7 +150,7 @@ export default function ChatScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      addBotMessage('Photo access is needed before Ribbon can review an image from your library.');
+      addBotMessage(text.chat.photoAccessNeeded);
       return;
     }
 
@@ -161,7 +168,7 @@ export default function ChatScreen() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      addBotMessage('Camera access is needed before Ribbon can review a new photo.');
+      addBotMessage(text.chat.cameraAccessNeeded);
       return;
     }
 
@@ -183,7 +190,7 @@ export default function ChatScreen() {
     const asset = result.assets[0];
 
     if (asset.fileSize && asset.fileSize > 4_000_000) {
-      addBotMessage('That image is too large. Please choose a smaller photo.');
+      addBotMessage(text.chat.imageTooLarge);
       return;
     }
 
@@ -193,7 +200,7 @@ export default function ChatScreen() {
     ]);
 
     if (!chatImage) {
-      addBotMessage('I could not process that image. Please choose a different photo.');
+      addBotMessage(text.chat.imageFailed);
       return;
     }
 
@@ -215,7 +222,7 @@ export default function ChatScreen() {
     }
 
     if (!preferences.geminiApiKey.trim()) {
-      addBotMessage('Add your Gemini API key in Settings before chatting with Ribbon.');
+      addBotMessage(text.chat.addKeyBeforeChat);
       return;
     }
 
@@ -223,7 +230,7 @@ export default function ChatScreen() {
       id: `user-${Date.now()}`,
       image: attachedImage ?? undefined,
       role: 'user',
-      text: trimmed || 'Please review this image and give diabetes prevention advice.',
+      text: trimmed || text.chat.imageReviewPrompt,
     };
 
     const nextMessages = [...messages, userMessage];
@@ -239,7 +246,8 @@ export default function ChatScreen() {
         healthSummary,
         preferences.ribbonTone,
         dailyLogContext,
-        preferences.geminiApiKey
+        preferences.geminiApiKey,
+        language
       );
       addMessage({
         id: `bot-${Date.now()}`,
@@ -253,7 +261,7 @@ export default function ChatScreen() {
         text:
           error instanceof Error
             ? error.message
-            : 'The chatbot could not reply right now. Please try again.',
+            : text.chat.fallbackError,
       });
     } finally {
       setIsSending(false);
@@ -286,45 +294,43 @@ export default function ChatScreen() {
           <View style={styles.headerTop}>
             <View>
               <ThemedText type="title">Ribbon</ThemedText>
-              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-                Your Diabeto health companion.
-              </ThemedText>
+              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>{text.chat.subtitle}</ThemedText>
             </View>
             <Pressable onPress={clearMemory} style={[styles.clearButton, isDark && styles.clearButtonDark]}>
               <ThemedText style={[styles.clearText, isDark && styles.contextTextDark]}>
-                Clear
+                {text.common.clear}
               </ThemedText>
             </Pressable>
           </View>
           <View style={[styles.contextPill, isDark && styles.contextPillDark]}>
             <ThemedText style={[styles.contextText, isDark && styles.contextTextDark]}>
               {!preferences.geminiApiKey.trim()
-                ? 'Gemini API key needed'
+                ? text.chat.keyNeeded
                 : healthSummary || dailyLogContext
-                  ? 'Using Predict data, daily logs, and chat memory'
-                  : 'Using chat memory only'}
+                  ? text.chat.usingAll
+                  : text.chat.usingMemory}
             </ThemedText>
           </View>
         </View>
 
         {!preferences.geminiApiKey.trim() ? (
           <View style={[styles.keyPanel, isDark && styles.keyPanelDark]}>
-            <ThemedText type="defaultSemiBold">Ribbon needs your Gemini API key.</ThemedText>
+            <ThemedText type="defaultSemiBold">{text.chat.keyPanelTitle}</ThemedText>
             <ThemedText style={[styles.keyPanelText, isDark && styles.mutedDark]}>
-              Create a key in Google AI Studio, copy it, then paste it in Settings.
+              {text.chat.keyPanelBody}
             </ThemedText>
             <View style={styles.keyPanelActions}>
               <Pressable
                 onPress={() => Linking.openURL(GOOGLE_AI_STUDIO_KEY_URL)}
                 style={[styles.keyPanelButton, { borderColor: accent.primary }]}>
                 <ThemedText style={[styles.keyPanelButtonText, { color: accent.primary }]}>
-                  Get an API key
+                  {text.settings.getApiKey}
                 </ThemedText>
               </Pressable>
               <Pressable
                 onPress={() => router.push('/(tabs)/settings')}
                 style={[styles.keyPanelButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
-                <ThemedText style={styles.keyPanelPrimaryText}>Open Settings</ThemedText>
+                <ThemedText style={styles.keyPanelPrimaryText}>{text.chat.openSettings}</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -349,7 +355,7 @@ export default function ChatScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.quickPromptScroller}>
-            {quickPrompts.map((prompt) => (
+            {text.chat.quickPrompts.map((prompt) => (
               <Pressable
                 disabled={isSending}
                 key={prompt}
@@ -368,21 +374,21 @@ export default function ChatScreen() {
                 <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
                 <View style={styles.attachmentText}>
                   <ThemedText style={[styles.attachmentTitle, isDark && styles.contextTextDark]}>
-                    Image attached
+                    {text.chat.imageAttached}
                   </ThemedText>
                   <ThemedText style={[styles.attachmentSubtitle, isDark && styles.mutedDark]}>
-                    Ready for Ribbon to review.
+                    {text.chat.imageReady}
                   </ThemedText>
                 </View>
                 <Pressable onPress={() => setAttachedImage(null)} style={styles.removeImageButton}>
-                  <ThemedText style={styles.removeImageText}>Remove</ThemedText>
+                  <ThemedText style={styles.removeImageText}>{text.common.remove}</ThemedText>
                 </Pressable>
               </View>
             ) : null}
             <TextInput
               multiline
               onChangeText={setDraft}
-              placeholder="Ask about meals, habits, or an image..."
+              placeholder={text.chat.promptPlaceholder}
               placeholderTextColor={isDark ? '#8faec5' : '#7d8b95'}
               style={[styles.input, attachedImage && styles.inputWithAttachment, isDark && styles.inputDark]}
               value={draft}
@@ -398,7 +404,7 @@ export default function ChatScreen() {
                   size={17}
                   weight="semibold"
                 />
-                <ThemedText style={styles.attachText}>Attach</ThemedText>
+                <ThemedText style={styles.attachText}>{text.chat.attach}</ThemedText>
               </Pressable>
               <Pressable
                 disabled={isSending || !preferences.geminiApiKey.trim()}
@@ -414,7 +420,7 @@ export default function ChatScreen() {
                   size={17}
                   weight="semibold"
                 />
-                <ThemedText style={styles.sendText}>{isSending ? 'Wait' : 'Send'}</ThemedText>
+                <ThemedText style={styles.sendText}>{isSending ? text.common.wait : text.common.send}</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -510,6 +516,8 @@ function getPreviewUri(image: Pick<ChatImage, 'previewBase64' | 'previewMimeType
 }
 
 function TypingBubble({ isDark }: { isDark: boolean }) {
+  const { text } = useI18n();
+
   return (
     <View style={styles.messageRow}>
       <View style={styles.avatar}>
@@ -517,7 +525,7 @@ function TypingBubble({ isDark }: { isDark: boolean }) {
       </View>
       <View style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
         <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
-          Ribbon is preparing a response...
+          {text.chat.typing}
         </ThemedText>
       </View>
     </View>

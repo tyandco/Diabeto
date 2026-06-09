@@ -7,11 +7,13 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getAppIconSource, useAccentPalette } from '@/lib/app-preferences';
+import { useI18n } from '@/lib/localization';
 
 export default function HomeScreen() {
   const isDark = useColorScheme() === 'dark';
   const accent = useAccentPalette();
   const router = useRouter();
+  const { text } = useI18n();
 
   return (
     <ThemedView style={styles.screen}>
@@ -21,63 +23,63 @@ export default function HomeScreen() {
           <View style={styles.heroCopy}>
             <ThemedText type="title">Diabeto</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-              Track risk, understand meals, and chat through healthier choices.
+              {text.home.subtitle}
             </ThemedText>
           </View>
         </View>
 
         <View style={[styles.summaryBand, isDark && styles.summaryBandDark]}>
-          <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>Today</ThemedText>
-          <ThemedText type="subtitle">Start with a quick risk check.</ThemedText>
+          <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>{text.home.today}</ThemedText>
+          <ThemedText type="subtitle">{text.home.quickRiskCheck}</ThemedText>
           <ThemedText style={[styles.summaryText, isDark && styles.mutedDark]}>
-            Your prediction data also helps Ribbon give more specific food and habit advice.
+            {text.home.predictionHelps}
           </ThemedText>
           <Pressable
             onPress={() => router.push('/(tabs)/predict')}
             style={[styles.primaryAction, { backgroundColor: accent.primary }]}>
             <IconSymbol color="#ffffff" name="stethoscope" size={18} />
-            <ThemedText style={styles.primaryActionText}>Open Predict</ThemedText>
+            <ThemedText style={styles.primaryActionText}>{text.home.openPredict}</ThemedText>
           </Pressable>
         </View>
 
         <View style={styles.quickGrid}>
           <HomeTile
-            body="Balanced meal ideas and simple habit targets."
+            body={text.home.guideBody}
             icon="fork.knife"
             iconColor={accent.primary}
             isDark={isDark}
             onPress={() => router.push('/(tabs)/explore')}
-            title="Guide"
+            title={text.tabs.guide}
           />
           <HomeTile
-            body="Record glucose, sleep, activity, water, meals, and notes."
+            body={text.home.dailyLogBody}
             icon="calendar"
             iconColor={accent.primary}
             isDark={isDark}
             onPress={() => router.push('/(tabs)/log')}
-            title="Daily Log"
+            title={text.home.dailyLog}
           />
           <HomeTile
-            body="Ask Ribbon about meals, snacks, habits, or food photos."
+            body={text.home.chatBody}
             icon="message.fill"
             iconColor={accent.primary}
             isDark={isDark}
             onPress={() => router.push('/(tabs)/chat')}
-            title="Chat"
+            title={text.tabs.chat}
           />
           <HomeTile
-            body="Adjust appearance, icon, colors, and Ribbon tone."
+            body={text.home.settingsBody}
             icon="gearshape.fill"
             iconColor={accent.primary}
             isDark={isDark}
             onPress={() => router.push('/(tabs)/settings')}
-            title="Settings"
+            title={text.tabs.settings}
           />
         </View>
 
         <View style={styles.note}>
           <ThemedText style={[styles.noteText, isDark && styles.mutedDark]}>
-            Diabeto is educational and does not replace medical diagnosis or care.
+            {text.home.disclaimer}
           </ThemedText>
         </View>
       </ScrollView>

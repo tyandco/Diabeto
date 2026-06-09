@@ -1,5 +1,7 @@
 import { getRibbonToneInstruction, type RibbonTone } from '@/lib/app-preferences';
 
+type ChatLanguage = 'en' | 'ar';
+
 export type ChatImage = {
   base64: string;
   mimeType: string;
@@ -75,20 +77,19 @@ export async function sendDiabetoChat(
   healthContext?: string | null,
   ribbonTone: RibbonTone = 'warm',
   dailyLogContext?: string | null,
-  geminiApiKey?: string | null
+  geminiApiKey?: string | null,
+  language: ChatLanguage = 'en'
 ) {
   const apiKey = geminiApiKey?.trim();
 
   if (!apiKey) {
-    throw new Error(
-      'Add your Gemini API key in Settings before chatting with Ribbon.'
-    );
+    throw new Error(chatErrors[language].missingKey);
   }
 
   const requestBody = JSON.stringify(
     buildGeminiRequest(messages, healthContext ?? null, ribbonTone, dailyLogContext ?? null)
   );
-  let lastError = 'Gemini could not answer right now.';
+  let lastError = chatErrors[language].genericGeminiFailure;
 
   const result = await fetchGemini(apiKey, requestBody);
 
@@ -97,18 +98,18 @@ export async function sendDiabetoChat(
     const finishReason = getFinishReason(result.data);
 
     if (finishReason === 'MAX_TOKENS' || isLikelyIncompleteReply(text)) {
-      return `${text}\n\n[Gemini may have cut this off. Send "continue" if you want the rest.]`;
+      return `${text}\n\n${chatErrors[language].cutOff}`;
     }
 
     if (finishReason && finishReason !== 'STOP') {
-      return `${text}\n\n[Gemini stopped early: ${finishReason}]`;
+      return `${text}\n\n${chatErrors[language].stoppedEarly(finishReason)}`;
     }
 
     return text;
   }
 
   lastError = result.data.error?.message ?? lastError;
-  throw new Error(cleanGeminiError(lastError));
+  throw new Error(cleanGeminiError(lastError, language));
 }
 
 async function fetchGemini(apiKey: string, requestBody: string) {
@@ -200,7 +201,7 @@ function extractText(data: GeminiResponse) {
     .trim();
 
   if (!text) {
-    throw new Error('I could not create a reply. Please try asking in a different way.');
+    throw new Error(chatErrors.en.noReply);
   }
 
   return text;
@@ -258,31 +259,28 @@ function isLikelyIncompleteReply(text: string) {
   );
 }
 
-function cleanGeminiError(message: string) {
+function cleanGeminiError(message: string, language: ChatLanguage) {
+  const errors = chatErrors[language];
+
   if (message.toLowerCase().includes('api key not valid')) {
-    return 'Gemini says this API key is not valid. Check the Gemini API key saved in Settings.';
+    return errors.invalidKey;
   }
 
   if (message.toLowerCase().includes('quota')) {
     const retrySeconds = getRetrySeconds(message);
 
     if (retrySeconds) {
-      return `Gemini hit a short rate limit. Wait about ${retrySeconds} seconds, then send again.`;
+      return errors.shortRateLimit(retrySeconds);
     }
 
     if (message.toLowerCase().includes('limit: 0')) {
-      return 'Gemini has no free quota available for this model/key right now. Try again after the daily reset, enable billing, or switch API keys.';
+      return errors.noFreeQuota;
     }
 
-    return 'Gemini quota is not available right now. Wait a few minutes, then try again.';
+    return errors.quotaUnavailable;
   }
 
   return message;
-}
-
-function isQuotaError(message: string) {
-  const lowerMessage = message.toLowerCase();
-  return lowerMessage.includes('quota') || lowerMessage.includes('rate limit');
 }
 
 function getRetrySeconds(message: string) {
@@ -294,6 +292,35 @@ function getRetrySeconds(message: string) {
 
   return Math.ceil(Number(match[1]));
 }
+
+const chatErrors = {
+  en: {
+    cutOff: '[Gemini may have cut this off. Send "continue" if you want the rest.]',
+    genericGeminiFailure: 'Gemini could not answer right now.',
+    invalidKey: 'Gemini says this API key is not valid. Check the Gemini API key saved in Settings.',
+    missingKey: 'Add your Gemini API key in Settings before chatting with Ribbon.',
+    noFreeQuota:
+      'Gemini has no free quota available for this model/key right now. Try again after the daily reset, enable billing, or switch API keys.',
+    noReply: 'I could not create a reply. Please try asking in a different way.',
+    quotaUnavailable: 'Gemini quota is not available right now. Wait a few minutes, then try again.',
+    shortRateLimit: (seconds: number) =>
+      `Gemini hit a short rate limit. Wait about ${seconds} seconds, then send again.`,
+    stoppedEarly: (reason: string) => `[Gemini stopped early: ${reason}]`,
+  },
+  ar: {
+    cutOff: '[ربما قطع Gemini الرد. أرسل "تابع" إذا أردت الباقي.]',
+    genericGeminiFailure: 'لا يستطيع Gemini الرد الآن.',
+    invalidKey: 'يقول Gemini إن مفتاح API غير صالح. تحقق من مفتاح Gemini API المحفوظ في الإعدادات.',
+    missingKey: 'أضف مفتاح Gemini API في الإعدادات قبل الدردشة مع Ribbon.',
+    noFreeQuota:
+      'لا توجد حصة مجانية متاحة من Gemini لهذا النموذج أو المفتاح الآن. حاول بعد إعادة التعيين اليومية، أو فعّل الفوترة، أو بدّل مفتاح API.',
+    noReply: 'لم أتمكن من إنشاء رد. حاول السؤال بطريقة مختلفة.',
+    quotaUnavailable: 'حصة Gemini غير متاحة الآن. انتظر بضع دقائق ثم حاول مرة أخرى.',
+    shortRateLimit: (seconds: number) =>
+      `وصل Gemini إلى حد مؤقت. انتظر حوالي ${seconds} ثانية، ثم أرسل مرة أخرى.`,
+    stoppedEarly: (reason: string) => `[توقف Gemini مبكرا: ${reason}]`,
+  },
+};
 
 function getGeminiModel() {
   return DEFAULT_GEMINI_MODEL;

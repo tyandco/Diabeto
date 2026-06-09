@@ -19,6 +19,7 @@ import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
+import { useI18n } from '@/lib/localization';
 import { markOnboardingComplete } from '@/lib/onboarding-status';
 
 const appIconImage = require('@/assets/images/icon.png');
@@ -48,10 +49,9 @@ const initialForm: FormState = {
   glucoseMgDl: '',
 };
 
-const pageTitles = ['Welcome', 'Terms', 'Health Details', 'Glucose Access', 'Ribbon'];
-
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
+  const { text } = useI18n();
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -93,7 +93,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (page < pageTitles.length - 1) {
+    if (page < text.onboarding.pageTitles.length - 1) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setDirection(1);
       setPage((current) => current + 1);
@@ -150,7 +150,7 @@ export default function OnboardingScreen() {
 
       <View style={[styles.progressRail, isDark && styles.progressRailDark]}>
         <View style={styles.progressRow}>
-          {pageTitles.map((title, index) => {
+          {text.onboarding.pageTitles.map((title, index) => {
             const isCurrent = index === page;
 
             return (
@@ -176,7 +176,7 @@ export default function OnboardingScreen() {
         ]}>
         {page > 0 ? (
           <Pressable onPress={back} style={styles.secondaryButton}>
-            <ThemedText style={styles.secondaryButtonText}>Back</ThemedText>
+            <ThemedText style={styles.secondaryButtonText}>{text.common.back}</ThemedText>
           </Pressable>
         ) : null}
         <Pressable
@@ -184,7 +184,7 @@ export default function OnboardingScreen() {
           onPress={next}
           style={[styles.button, !canContinue && styles.buttonDisabled]}>
           <ThemedText style={styles.buttonText}>
-            {page === pageTitles.length - 1 ? 'Start Diabeto' : 'Continue'}
+            {page === text.onboarding.pageTitles.length - 1 ? text.onboarding.startDiabeto : text.common.continue}
           </ThemedText>
         </Pressable>
       </View>
@@ -193,6 +193,8 @@ export default function OnboardingScreen() {
 }
 
 function WelcomePage({ isDark }: { isDark: boolean }) {
+  const { text } = useI18n();
+
   return (
     <View style={styles.page}>
       <View style={styles.logoMark}>
@@ -202,15 +204,11 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
         Diabeto
       </ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        A diabetes prevention assistant that estimates risk and gives practical habit advice from simple health details.
+        {text.onboarding.welcomeSubtitle}
       </ThemedText>
       <InfoCard
         isDark={isDark}
-        items={[
-          'Quick lifestyle-based risk estimate',
-          'Personal advice from your details',
-          'Optional AI chat for meals and food images',
-        ]}
+        items={text.onboarding.welcomeItems}
       />
     </View>
   );
@@ -229,39 +227,39 @@ function TermsPage({
   setAcceptedPrivacy: (value: boolean) => void;
   setAcceptedTerms: (value: boolean) => void;
 }) {
+  const { text } = useI18n();
+
   return (
     <View style={styles.page}>
-      <ThemedText type="title">Before You Start</ThemedText>
+      <ThemedText type="title">{text.onboarding.beforeStart}</ThemedText>
       <View style={[styles.panel, isDark && styles.panelDark]}>
-        <ThemedText type="subtitle">Terms of Service</ThemedText>
+        <ThemedText type="subtitle">{text.onboarding.termsTitle}</ThemedText>
         <ThemedText>
-          Diabeto is for education and prevention support only. It does not diagnose diabetes,
-          replace a doctor, or provide emergency care.
+          {text.onboarding.termsBody}
         </ThemedText>
         <ThemedText>
-          You are responsible for checking important health decisions with a qualified healthcare professional.
+          {text.onboarding.termsResponsibility}
         </ThemedText>
       </View>
       <View style={[styles.panel, isDark && styles.panelDark]}>
-        <ThemedText type="subtitle">Privacy Policy</ThemedText>
+        <ThemedText type="subtitle">{text.onboarding.privacyTitle}</ThemedText>
         <ThemedText>
-          Diabeto uses the details you enter to estimate risk and personalize the AI companion&apos;s replies.
-          Chat messages and selected images may be sent to the configured Gemini API.
+          {text.onboarding.privacyBody}
         </ThemedText>
         <ThemedText>
-          Do not upload private medical documents, IDs, or photos you do not want processed by the AI provider.
+          {text.onboarding.privacyWarning}
         </ThemedText>
       </View>
       <Checkbox
         checked={acceptedTerms}
         isDark={isDark}
-        label="I agree to the Terms of Service"
+        label={text.onboarding.agreeTerms}
         onPress={() => setAcceptedTerms(!acceptedTerms)}
       />
       <Checkbox
         checked={acceptedPrivacy}
         isDark={isDark}
-        label="I understand the Privacy Policy"
+        label={text.onboarding.understandPrivacy}
         onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
       />
     </View>
@@ -277,34 +275,36 @@ function HealthPage({
   isDark: boolean;
   update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
 }) {
+  const { text } = useI18n();
+
   return (
     <View style={styles.page}>
-      <ThemedText type="title">Your Details</ThemedText>
+      <ThemedText type="title">{text.onboarding.yourDetails}</ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        These details help Diabeto make a first estimate. You can adjust them later.
+        {text.onboarding.detailsHelp}
       </ThemedText>
       <View style={styles.grid}>
-        <Field label="Age" value={form.age} onChangeText={(value) => update('age', value)} suffix="years" isDark={isDark} />
-        <Field label="Height" value={form.heightCm} onChangeText={(value) => update('heightCm', value)} suffix="cm" isDark={isDark} />
-        <Field label="Weight" value={form.weightKg} onChangeText={(value) => update('weightKg', value)} suffix="kg" isDark={isDark} />
+        <Field label={text.onboarding.age} value={form.age} onChangeText={(value) => update('age', value)} suffix={text.onboarding.years} isDark={isDark} />
+        <Field label={text.onboarding.height} value={form.heightCm} onChangeText={(value) => update('heightCm', value)} suffix="cm" isDark={isDark} />
+        <Field label={text.onboarding.weight} value={form.weightKg} onChangeText={(value) => update('weightKg', value)} suffix="kg" isDark={isDark} />
       </View>
       <OptionGroup
-        label="Activity"
+        label={text.onboarding.activity}
         options={[
-          ['low', 'Low'],
-          ['moderate', 'Moderate'],
-          ['high', 'High'],
+          ['low', text.onboarding.low],
+          ['moderate', text.onboarding.moderate],
+          ['high', text.onboarding.high],
         ]}
         value={form.activityLevel}
         onChange={(value) => update('activityLevel', value)}
         isDark={isDark}
       />
       <OptionGroup
-        label="Sugary drinks"
+        label={text.onboarding.sugaryDrinks}
         options={[
-          ['rarely', 'Rarely'],
-          ['sometimes', 'Sometimes'],
-          ['often', 'Often'],
+          ['rarely', text.onboarding.rarely],
+          ['sometimes', text.onboarding.sometimes],
+          ['often', text.onboarding.often],
         ]}
         value={form.sugaryDrinks}
         onChange={(value) => update('sugaryDrinks', value)}
@@ -313,7 +313,7 @@ function HealthPage({
       <Checkbox
         checked={form.familyHistory}
         isDark={isDark}
-        label="Family history of diabetes"
+        label={text.onboarding.familyHistory}
         onPress={() => update('familyHistory', !form.familyHistory)}
       />
     </View>
@@ -329,17 +329,19 @@ function GlucosePage({
   isDark: boolean;
   update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
 }) {
+  const { text } = useI18n();
+
   return (
     <View style={styles.page}>
-      <ThemedText type="title">Glucose Access</ThemedText>
+      <ThemedText type="title">{text.onboarding.glucoseAccess}</ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        Not everyone can measure blood glucose at home. Diabeto will not require a glucose value.
+        {text.onboarding.glucoseHelp}
       </ThemedText>
       <OptionGroup
-        label="Are you able to measure your blood glucose right now?"
+        label={text.onboarding.canMeasureGlucose}
         options={[
-          [true, 'Yes'],
-          [false, 'No'],
+          [true, text.common.yes],
+          [false, text.common.no],
         ]}
         value={form.canMeasureGlucose}
         onChange={(value) => update('canMeasureGlucose', value)}
@@ -347,7 +349,7 @@ function GlucosePage({
       />
       {form.canMeasureGlucose ? (
         <Field
-          label="Glucose"
+          label={text.onboarding.glucose}
           value={form.glucoseMgDl}
           onChangeText={(value) => update('glucoseMgDl', value)}
           suffix="mg/dL"
@@ -355,10 +357,9 @@ function GlucosePage({
         />
       ) : null}
       <View style={[styles.panel, isDark && styles.panelDark]}>
-        <ThemedText type="defaultSemiBold">What this means</ThemedText>
+        <ThemedText type="defaultSemiBold">{text.onboarding.whatThisMeans}</ThemedText>
         <ThemedText style={styles.helpText}>
-          If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history,
-          activity, and sugary drink habits. A lab glucose or A1C test can make the picture clearer later.
+          {text.onboarding.glucoseMeaning}
         </ThemedText>
       </View>
     </View>
@@ -366,6 +367,7 @@ function GlucosePage({
 }
 
 function RibbonPage({ isDark }: { isDark: boolean }) {
+  const { text } = useI18n();
   const headTilt = useRef(new Animated.Value(0)).current;
   const handBob = useRef(new Animated.Value(0)).current;
   const handOpacity = useRef(new Animated.Value(0)).current;
@@ -595,21 +597,14 @@ function RibbonPage({ isDark }: { isDark: boolean }) {
         />
       </View>
       <ThemedText type="title" style={styles.title}>
-        Meet Ribbon
+        {text.onboarding.meetRibbon}
       </ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        Ribbon is your Diabeto health companion. She can help you turn your risk estimate into
-        practical meal ideas, food swaps, activity goals, and safer daily habits.
+        {text.onboarding.ribbonBody}
       </ThemedText>
       <InfoCard
         isDark={isDark}
-        items={[
-          'Uses your saved health details when you chat',
-          'Can review food or drink images you attach',
-          'Requires your own Gemini API key from Google AI Studio',
-          'Paste the key in Settings before using chat',
-          'Keeps advice educational, supportive, and practical',
-        ]}
+        items={text.onboarding.ribbonItems}
       />
     </View>
   );

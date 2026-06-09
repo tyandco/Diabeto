@@ -13,6 +13,7 @@ import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
+import { useI18n } from '@/lib/localization';
 
 type FormState = {
   age: string;
@@ -39,6 +40,7 @@ const initialForm: FormState = {
 export default function PredictScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { language, text } = useI18n();
   const [form, setForm] = useState<FormState>(initialForm);
   const [hasLoadedSavedProfile, setHasLoadedSavedProfile] = useState(false);
 
@@ -91,30 +93,30 @@ export default function PredictScreen() {
         <View style={styles.header}>
           <ThemedText type="title">Diabeto</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            AI-style diabetes risk prediction and habit advice.
+            {text.predict.subtitle}
           </ThemedText>
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Your Details</ThemedText>
+          <ThemedText type="subtitle">{text.predict.yourDetails}</ThemedText>
 
           <View style={styles.grid}>
             <Field
-              label="Age"
+              label={text.onboarding.age}
               value={form.age}
               onChangeText={(value) => update('age', value)}
-              suffix="years"
+              suffix={text.onboarding.years}
               isDark={isDark}
             />
             <Field
-              label="Height"
+              label={text.onboarding.height}
               value={form.heightCm}
               onChangeText={(value) => update('heightCm', value)}
               suffix="cm"
               isDark={isDark}
             />
             <Field
-              label="Weight"
+              label={text.onboarding.weight}
               value={form.weightKg}
               onChangeText={(value) => update('weightKg', value)}
               suffix="kg"
@@ -123,10 +125,10 @@ export default function PredictScreen() {
           </View>
 
           <OptionGroup
-            label="Can measure glucose now?"
+            label={text.predict.canMeasureGlucose}
             options={[
-              [true, 'Yes'],
-              [false, 'No'],
+              [true, text.common.yes],
+              [false, text.common.no],
             ]}
             value={form.canMeasureGlucose}
             onChange={(value) => update('canMeasureGlucose', value)}
@@ -135,7 +137,7 @@ export default function PredictScreen() {
           {form.canMeasureGlucose ? (
             <View style={styles.grid}>
             <Field
-              label="Glucose"
+              label={text.onboarding.glucose}
               value={form.glucoseMgDl}
               onChangeText={(value) => update('glucoseMgDl', value)}
               suffix="mg/dL"
@@ -145,11 +147,11 @@ export default function PredictScreen() {
           ) : null}
 
           <OptionGroup
-            label="Activity"
+            label={text.onboarding.activity}
             options={[
-              ['low', 'Low'],
-              ['moderate', 'Moderate'],
-              ['high', 'High'],
+              ['low', text.onboarding.low],
+              ['moderate', text.onboarding.moderate],
+              ['high', text.onboarding.high],
             ]}
             value={form.activityLevel}
             onChange={(value) => update('activityLevel', value)}
@@ -157,11 +159,11 @@ export default function PredictScreen() {
           />
 
           <OptionGroup
-            label="Sugary drinks"
+            label={text.onboarding.sugaryDrinks}
             options={[
-              ['rarely', 'Rarely'],
-              ['sometimes', 'Sometimes'],
-              ['often', 'Often'],
+              ['rarely', text.onboarding.rarely],
+              ['sometimes', text.onboarding.sometimes],
+              ['often', text.onboarding.often],
             ]}
             value={form.sugaryDrinks}
             onChange={(value) => update('sugaryDrinks', value)}
@@ -181,33 +183,33 @@ export default function PredictScreen() {
             <View style={[styles.checkbox, form.familyHistory && styles.checkboxActive]}>
               {form.familyHistory ? <ThemedText style={styles.checkmark}>Y</ThemedText> : null}
             </View>
-            <ThemedText type="defaultSemiBold">Family history of diabetes</ThemedText>
+            <ThemedText type="defaultSemiBold">{text.onboarding.familyHistory}</ThemedText>
           </Pressable>
         </View>
 
         <View style={[styles.resultPanel, isDark && styles.panelDark]}>
-          {prediction ? (
+          {profile && prediction ? (
             <>
               <View style={styles.resultTop}>
                 <View>
-                  <ThemedText type="subtitle">Prediction</ThemedText>
+                  <ThemedText type="subtitle">{text.predict.prediction}</ThemedText>
                   <ThemedText style={[styles.muted, isDark && styles.mutedDark]}>
-                    BMI {prediction.bmi}
+                    {text.predict.bmi} {prediction.bmi}
                   </ThemedText>
                 </View>
                 <View style={[styles.scorePill, riskStyle(prediction.riskLevel)]}>
-                  <ThemedText style={styles.scoreText}>{prediction.riskLevel}</ThemedText>
+                  <ThemedText style={styles.scoreText}>{text.predict.riskLevels[prediction.riskLevel]}</ThemedText>
                 </View>
               </View>
 
               <View style={styles.scoreTrack}>
                 <View style={[styles.scoreFill, { width: `${prediction.score}%` }]} />
               </View>
-              <ThemedText>{prediction.summary}</ThemedText>
+              <ThemedText>{translateSummary(prediction.riskLevel, prediction.score, language)}</ThemedText>
 
               <View style={styles.adviceList}>
-                <ThemedText type="defaultSemiBold">Personal advice</ThemedText>
-                {prediction.advice.map((item) => (
+                <ThemedText type="defaultSemiBold">{text.predict.personalAdvice}</ThemedText>
+                {translateAdvice(profile, prediction.riskLevel, language).map((item) => (
                   <View key={item} style={styles.adviceItem}>
                     <View style={styles.bullet} />
                     <ThemedText style={styles.adviceText}>{item}</ThemedText>
@@ -216,12 +218,12 @@ export default function PredictScreen() {
               </View>
             </>
           ) : (
-            <ThemedText>Enter valid numbers to see your prediction.</ThemedText>
+            <ThemedText>{text.predict.enterValid}</ThemedText>
           )}
         </View>
 
         <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
-          This app is for education only and does not diagnose diabetes.
+          {text.predict.disclaimer}
         </ThemedText>
       </ScrollView>
     </ThemedView>
@@ -331,6 +333,76 @@ function riskStyle(riskLevel: string) {
   }
 
   return styles.lowRisk;
+}
+
+function translateSummary(
+  riskLevel: 'Low' | 'Moderate' | 'High',
+  score: number,
+  language: 'en' | 'ar'
+) {
+  if (language !== 'ar') {
+    if (riskLevel === 'High') {
+      return `Your estimated risk is high (${score}/100). This is not a diagnosis, but it is worth discussing with a healthcare professional.`;
+    }
+
+    if (riskLevel === 'Moderate') {
+      return `Your estimated risk is moderate (${score}/100). Improving daily habits can lower your risk over time.`;
+    }
+
+    return `Your estimated risk is low (${score}/100). Keep building habits that support steady blood sugar.`;
+  }
+
+  if (riskLevel === 'High') {
+    return `مستوى الخطورة المقدر مرتفع (${score}/100). هذا ليس تشخيصا، لكنه يستحق المناقشة مع مختص رعاية صحية.`;
+  }
+
+  if (riskLevel === 'Moderate') {
+    return `مستوى الخطورة المقدر متوسط (${score}/100). تحسين العادات اليومية يمكن أن يقلل الخطورة مع الوقت.`;
+  }
+
+  return `مستوى الخطورة المقدر منخفض (${score}/100). استمر في بناء عادات تدعم استقرار سكر الدم.`;
+}
+
+function translateAdvice(
+  profile: DiabetesProfile,
+  riskLevel: 'Low' | 'Moderate' | 'High',
+  language: 'en' | 'ar'
+) {
+  const bmi = profile.weightKg / ((profile.heightCm / 100) * (profile.heightCm / 100));
+
+  if (language !== 'ar') {
+    return predictDiabetesRisk(profile).advice;
+  }
+
+  const advice = [
+    'اجعل وجباتك مبنية حول الخضار والبروتين قليل الدهون والفاصوليا والعدس والحبوب الكاملة والمكسرات والمشروبات غير المحلاة.',
+    'استهدف 150 دقيقة من النشاط المتوسط أسبوعيا، مثل المشي السريع أو ركوب الدراجة أو السباحة.',
+    'اختر الفاكهة أو اللبن أو المكسرات بدلا من الحلويات عندما ترغب في وجبة خفيفة.',
+  ];
+
+  if (bmi >= 25) {
+    advice.push('هدف صغير لفقدان الوزن، حتى 5% إلى 7% من وزن الجسم، يمكن أن يحسن حساسية الإنسولين.');
+  }
+
+  if (typeof profile.glucoseMgDl === 'number' && profile.glucoseMgDl >= 100) {
+    advice.push('قيمة الجلوكوز المدخلة مرتفعة، لذلك فكر في فحص الجلوكوز الصائم أو A1C مع طبيب.');
+  } else if (!profile.canMeasureGlucose) {
+    advice.push('إن أمكن، اسأل عيادة أو صيدلية عن فحص الجلوكوز الصائم أو A1C للحصول على صورة أوضح.');
+  }
+
+  if (profile.sugaryDrinks !== 'rarely') {
+    advice.push('استبدل المشروبات الغازية والشاي المحلى والعصير ومشروبات الطاقة بالماء أو الشاي غير المحلى في معظم الأيام.');
+  }
+
+  if (profile.activityLevel === 'low') {
+    advice.push('ابدأ بالمشي 10 دقائق بعد وجبة واحدة يوميا، ثم زد المدة تدريجيا.');
+  }
+
+  if (profile.familyHistory || riskLevel === 'High') {
+    advice.push('لأن عوامل الخطورة لديك أقوى، حدد مواعيد فحص منتظمة واسأل عن خطة وقاية.');
+  }
+
+  return advice.slice(0, 6);
 }
 
 const styles = StyleSheet.create({

@@ -17,10 +17,12 @@ import {
   type DailyLogEntry,
   type DailyLogMood,
 } from '@/lib/daily-log';
+import { useI18n } from '@/lib/localization';
 
 export default function DailyLogScreen() {
   const accent = useAccentPalette();
   const isDark = useColorScheme() === 'dark';
+  const { language, text } = useI18n();
   const [entries, setEntries] = useState<DailyLogEntry[]>([]);
   const [draft, setDraft] = useState<DailyLog>(initialDailyLog);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -54,18 +56,18 @@ export default function DailyLogScreen() {
   return (
     <ThemedView style={styles.screen}>
       <View style={styles.header}>
-        <ThemedText type="title">Daily Log</ThemedText>
+        <ThemedText type="title">{text.log.title}</ThemedText>
         <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-          History for Ribbon and your own review.
+          {text.log.subtitle}
         </ThemedText>
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
         {entries.length === 0 ? (
           <View style={[styles.emptyPanel, isDark && styles.panelDark]}>
-            <ThemedText type="subtitle">No logs yet</ThemedText>
+            <ThemedText type="subtitle">{text.log.noLogs}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-              Tap Log your day to add today&apos;s health snapshot.
+              {text.log.emptyHelp}
             </ThemedText>
           </View>
         ) : (
@@ -74,11 +76,11 @@ export default function DailyLogScreen() {
       </ScrollView>
 
       <Pressable
-        accessibilityLabel="Log your day"
+        accessibilityLabel={text.log.logYourDay}
         onPress={openEditor}
         style={[styles.fab, { backgroundColor: accent.primary }]}>
         <Feather color="#ffffff" name="edit-3" size={18} />
-        <ThemedText style={styles.fabText}>Log your day</ThemedText>
+        <ThemedText style={styles.fabText}>{text.log.logYourDay}</ThemedText>
       </Pressable>
 
       <Modal animationType="slide" onRequestClose={() => setIsEditorOpen(false)} transparent visible={isEditorOpen}>
@@ -86,9 +88,9 @@ export default function DailyLogScreen() {
           <ThemedView style={[styles.editor, isDark && styles.editorDark]}>
             <View style={styles.editorHeader}>
               <View>
-                <ThemedText type="subtitle">Log your day</ThemedText>
+                <ThemedText type="subtitle">{text.log.logYourDay}</ThemedText>
                 <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-                  {formatDate(getTodayLogDate())}
+                  {formatDate(getTodayLogDate(), language)}
                 </ThemedText>
               </View>
               <Pressable onPress={() => setIsEditorOpen(false)} style={styles.closeButton}>
@@ -100,15 +102,15 @@ export default function DailyLogScreen() {
               <View style={styles.grid}>
                 <Field
                   isDark={isDark}
-                  label="Glucose"
+                  label={text.log.glucose}
                   onChangeText={(value) => update('glucoseMgDl', value)}
-                  placeholder="Optional"
+                  placeholder={text.common.optional}
                   suffix="mg/dL"
                   value={draft.glucoseMgDl}
                 />
                 <Field
                   isDark={isDark}
-                  label="Activity"
+                  label={text.log.activity}
                   onChangeText={(value) => update('activityMinutes', value)}
                   placeholder="0"
                   suffix="min"
@@ -116,7 +118,7 @@ export default function DailyLogScreen() {
                 />
                 <Field
                   isDark={isDark}
-                  label="Sleep"
+                  label={text.log.sleep}
                   onChangeText={(value) => update('sleepHours', value)}
                   placeholder="0"
                   suffix="hours"
@@ -126,14 +128,14 @@ export default function DailyLogScreen() {
 
               <Counter
                 accent={accent.primary}
-                label="Water"
+                label={text.log.water}
                 onChange={(value) => update('waterCups', value)}
                 suffix="cups"
                 value={draft.waterCups}
               />
               <Counter
                 accent={accent.primary}
-                label="Balanced meals"
+                label={text.log.balancedMeals}
                 max={6}
                 onChange={(value) => update('balancedMeals', value)}
                 suffix="meals"
@@ -141,7 +143,7 @@ export default function DailyLogScreen() {
               />
 
               <View style={styles.optionGroup}>
-                <ThemedText type="defaultSemiBold">Mood</ThemedText>
+                <ThemedText type="defaultSemiBold">{text.log.mood}</ThemedText>
                 <View style={[styles.segmented, isDark && styles.segmentedDark]}>
                   {(['steady', 'good', 'tired', 'stressed'] as DailyLogMood[]).map((mood) => {
                     const selected = draft.mood === mood;
@@ -156,7 +158,7 @@ export default function DailyLogScreen() {
                             isDark && styles.segmentTextDark,
                             selected && styles.segmentTextActive,
                           ]}>
-                          {capitalize(mood)}
+                          {text.log.moods[mood]}
                         </ThemedText>
                       </Pressable>
                     );
@@ -167,14 +169,14 @@ export default function DailyLogScreen() {
               <TextInput
                 multiline
                 onChangeText={(value) => update('notes', value)}
-                placeholder="Meals, cravings, exercise, symptoms..."
+                placeholder={text.log.notesPlaceholder}
                 placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
                 style={[styles.notesInput, isDark && styles.inputDark]}
                 value={draft.notes}
               />
 
               <Pressable onPress={saveDraft} style={[styles.saveButton, { backgroundColor: accent.primary }]}>
-                <ThemedText style={styles.saveText}>Save Log</ThemedText>
+                <ThemedText style={styles.saveText}>{text.log.saveLog}</ThemedText>
               </Pressable>
             </ScrollView>
           </ThemedView>
@@ -185,20 +187,21 @@ export default function DailyLogScreen() {
 }
 
 function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean }) {
+  const { language, text } = useI18n();
   const { log } = entry;
   const stats = [
-    log.glucoseMgDl ? `${log.glucoseMgDl} mg/dL` : 'No glucose',
+    log.glucoseMgDl ? `${log.glucoseMgDl} mg/dL` : text.log.noGlucose,
     `${log.activityMinutes || '0'} min`,
-    log.sleepHours ? `${log.sleepHours}h sleep` : 'No sleep',
-    `${log.waterCups} water`,
-    `${log.balancedMeals} meals`,
+    log.sleepHours ? `${log.sleepHours}h ${text.log.sleep}` : text.log.noSleep,
+    `${log.waterCups} ${text.log.water}`,
+    `${log.balancedMeals} ${text.log.balancedMeals}`,
   ];
 
   return (
     <View style={[styles.historyCard, isDark && styles.panelDark]}>
       <View style={styles.cardTop}>
-        <ThemedText type="defaultSemiBold">{formatDate(entry.date)}</ThemedText>
-        <ThemedText style={[styles.mood, isDark && styles.mutedDark]}>{capitalize(log.mood)}</ThemedText>
+        <ThemedText type="defaultSemiBold">{formatDate(entry.date, language)}</ThemedText>
+        <ThemedText style={[styles.mood, isDark && styles.mutedDark]}>{text.log.moods[log.mood]}</ThemedText>
       </View>
       <View style={styles.statWrap}>
         {stats.map((stat) => (
@@ -280,16 +283,12 @@ function Counter({
   );
 }
 
-function formatDate(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString([], {
+function formatDate(date: string, language: 'en' | 'ar') {
+  return new Date(`${date}T00:00:00`).toLocaleDateString(language, {
     day: 'numeric',
     month: 'short',
     weekday: 'short',
   });
-}
-
-function capitalize(value: string) {
-  return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
 
 const styles = StyleSheet.create({

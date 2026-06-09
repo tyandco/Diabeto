@@ -4,46 +4,32 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const mealIdeas = [
-  'Breakfast: oats with berries, plain yogurt, and nuts.',
-  'Lunch: grilled chicken or beans with salad and brown rice.',
-  'Dinner: fish, lentils, or tofu with vegetables and a small whole grain portion.',
-  'Snack: apple slices, boiled eggs, hummus with carrots, or unsalted nuts.',
-];
-
-const habitIdeas = [
-  'Walk for 10 to 20 minutes after meals when possible.',
-  'Keep water nearby and avoid buying sugary drinks for home.',
-  'Sleep 7 to 9 hours because poor sleep can raise cravings and glucose levels.',
-  'Check weight, activity, and glucose trends weekly instead of judging one day.',
-];
+import { useI18n } from '@/lib/localization';
 
 export default function GuideScreen() {
   const isDark = useColorScheme() === 'dark';
+  const { text } = useI18n();
 
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <ThemedText type="title">Guide</ThemedText>
+          <ThemedText type="title">{text.guide.title}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            Simple food and lifestyle targets for lowering diabetes risk.
+            {text.guide.subtitle}
           </ThemedText>
         </View>
 
-        <Section title="What to Eat" items={mealIdeas} isDark={isDark} />
-        <Section title="What to Do" items={habitIdeas} isDark={isDark} />
+        <Section title={text.guide.eatTitle} items={text.guide.mealIdeas} isDark={isDark} />
+        <Section title={text.guide.doTitle} items={text.guide.habitIdeas} isDark={isDark} />
 
         <View style={[styles.infoBox, isDark && styles.infoBoxDark]}>
-          <ThemedText type="subtitle">About the Model</ThemedText>
+          <ThemedText type="subtitle">{text.guide.modelTitle}</ThemedText>
           <ThemedText>
-            Diabeto uses a lightweight local scoring model based on common risk factors:
-            age, BMI, glucose, family history, activity level, and sugary drink intake.
+            {text.guide.modelBody}
           </ThemedText>
           <ThemedText>
-            A future version can connect this screen to a trained Python or cloud AI model after
-            you collect a real dataset and decide where predictions should run.
+            {text.guide.modelFuture}
           </ThemedText>
         </View>
       </ScrollView>

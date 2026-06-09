@@ -24,6 +24,7 @@ const MAPPING = {
   'fork.knife': 'restaurant',
   'message.fill': 'chat',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'chevron.down': 'keyboard-arrow-down',
   'chevron.right': 'chevron-right',
 } as IconMapping;
 

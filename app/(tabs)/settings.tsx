@@ -1,28 +1,29 @@
 import * as Clipboard from 'expo-clipboard';
+import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   accentPalettes,
-  ribbonToneDescriptions,
-  ribbonToneLabels,
   updateAppPreferences,
   useAccentPalette,
   useAppPreferences,
   type AccentTheme,
   type AppearanceMode,
+  type AppLanguage,
   type RibbonTone,
 } from '@/lib/app-preferences';
+import { languageLabels, useI18n } from '@/lib/localization';
 
-const appearanceOptions: { label: string; value: AppearanceMode }[] = [
-  { label: 'System', value: 'system' },
-  { label: 'Light', value: 'light' },
-  { label: 'Dark', value: 'dark' },
+const languageOptions: { label: string; value: AppLanguage }[] = [
+  { label: languageLabels.system, value: 'system' },
+  { label: languageLabels.en, value: 'en' },
+  { label: languageLabels.ar, value: 'ar' },
 ];
-
 const toneOptions: RibbonTone[] = ['warm', 'cold', 'aggressive', 'casual'];
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 
@@ -30,28 +31,35 @@ export default function SettingsScreen() {
   const accent = useAccentPalette();
   const preferences = useAppPreferences();
   const isDark = useColorScheme() === 'dark';
+  const { text } = useI18n();
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const appearanceOptions: { label: string; value: AppearanceMode }[] = [
+    { label: text.settings.system, value: 'system' },
+    { label: text.settings.light, value: 'light' },
+    { label: text.settings.dark, value: 'dark' },
+  ];
 
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <ThemedText type="title">Settings</ThemedText>
+          <ThemedText type="title">{text.settings.title}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            Personalize Diabeto and Ribbon.
+            {text.settings.subtitle}
           </ThemedText>
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Gemini API Key</ThemedText>
+          <ThemedText type="subtitle">{text.settings.geminiApiKey}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            Ribbon uses your own Google AI Studio key. It stays on this device.
+            {text.settings.keyHelp}
           </ThemedText>
           <View style={[styles.keyInputWrap, isDark && styles.keyInputWrapDark]}>
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
               onChangeText={(value) => updateAppPreferences({ geminiApiKey: value })}
-              placeholder="Paste Gemini API key"
+              placeholder={text.settings.keyPlaceholder}
               placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
               secureTextEntry
               style={[styles.keyInput, isDark && styles.keyInputDark]}
@@ -63,7 +71,7 @@ export default function SettingsScreen() {
               onPress={() => Linking.openURL(GOOGLE_AI_STUDIO_KEY_URL)}
               style={[styles.keyButton, { borderColor: accent.primary }]}>
               <ThemedText style={[styles.keyButtonText, { color: accent.primary }]}>
-                Get an API key
+                {text.settings.getApiKey}
               </ThemedText>
             </Pressable>
             <Pressable
@@ -72,13 +80,13 @@ export default function SettingsScreen() {
                 updateAppPreferences({ geminiApiKey: text.trim() });
               }}
               style={[styles.keyButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
-              <ThemedText style={styles.pasteButtonText}>Paste</ThemedText>
+              <ThemedText style={styles.pasteButtonText}>{text.common.paste}</ThemedText>
             </Pressable>
           </View>
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Appearance</ThemedText>
+          <ThemedText type="subtitle">{text.settings.appearance}</ThemedText>
           <Segmented
             accent={accent.primary}
             isDark={isDark}
@@ -89,7 +97,23 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Color Theme</ThemedText>
+          <ThemedText type="subtitle">{text.settings.language}</ThemedText>
+          <Dropdown
+            accent={accent.primary}
+            isOpen={isLanguageOpen}
+            isDark={isDark}
+            onChange={(value) => {
+              updateAppPreferences({ language: value });
+              setIsLanguageOpen(false);
+            }}
+            options={languageOptions}
+            onToggle={() => setIsLanguageOpen((current) => !current)}
+            value={preferences.language}
+          />
+        </View>
+
+        <View style={[styles.panel, isDark && styles.panelDark]}>
+          <ThemedText type="subtitle">{text.settings.colorTheme}</ThemedText>
           <View style={styles.swatchGrid}>
             {(Object.keys(accentPalettes) as AccentTheme[]).map((theme) => {
               const palette = accentPalettes[theme];
@@ -104,7 +128,7 @@ export default function SettingsScreen() {
                     selected && { borderColor: palette.primary },
                   ]}>
                   <View style={[styles.swatch, { backgroundColor: palette.primary }]} />
-                  <ThemedText style={styles.optionText}>{palette.name}</ThemedText>
+                  <ThemedText style={styles.optionText}>{text.settings.colorThemeLabels[theme]}</ThemedText>
                 </Pressable>
               );
             })}
@@ -112,7 +136,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Ribbon Tone</ThemedText>
+          <ThemedText type="subtitle">{text.settings.ribbonTone}</ThemedText>
           <View style={[styles.toneList, isDark && styles.toneListDark]}>
             {toneOptions.map((tone) => {
               const selected = preferences.ribbonTone === tone;
@@ -128,7 +152,7 @@ export default function SettingsScreen() {
                         isDark && styles.toneTextDark,
                         selected && styles.selectedToneText,
                       ]}>
-                      {ribbonToneLabels[tone]}
+                      {text.settings.ribbonToneLabels[tone]}
                     </ThemedText>
                     <ThemedText
                       style={[
@@ -136,7 +160,7 @@ export default function SettingsScreen() {
                         isDark && styles.toneDescriptionDark,
                         selected && styles.selectedToneDescription,
                       ]}>
-                      ({ribbonToneDescriptions[tone]})
+                      ({text.settings.ribbonToneDescriptions[tone]})
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -182,6 +206,72 @@ function Segmented<T extends string>({
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+function Dropdown<T extends string>({
+  accent,
+  isDark,
+  isOpen,
+  onChange,
+  onToggle,
+  options,
+  value,
+}: {
+  accent: string;
+  isDark: boolean;
+  isOpen: boolean;
+  onChange: (value: T) => void;
+  onToggle: () => void;
+  options: { label: string; value: T }[];
+  value: T;
+}) {
+  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <View style={styles.dropdown}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isOpen }}
+        onPress={onToggle}
+        style={[
+          styles.dropdownButton,
+          isDark && styles.dropdownButtonDark,
+          isOpen && { borderColor: accent },
+        ]}>
+        <ThemedText style={[styles.dropdownValue, isDark && styles.segmentTextDark]}>
+          {selectedOption.label}
+        </ThemedText>
+        <IconSymbol color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText} name="chevron.down" size={22} />
+      </Pressable>
+
+      {isOpen ? (
+        <View style={[styles.dropdownMenu, isDark && styles.dropdownMenuDark]}>
+          {options.map((option) => {
+            const selected = option.value === value;
+
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => onChange(option.value)}
+                style={[
+                  styles.dropdownOption,
+                  selected && { backgroundColor: accent },
+                ]}>
+                <ThemedText
+                  style={[
+                    styles.dropdownOptionText,
+                    isDark && styles.segmentTextDark,
+                    selected && styles.segmentTextActive,
+                  ]}>
+                  {option.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -258,6 +348,50 @@ const styles = StyleSheet.create({
   pasteButtonText: {
     color: '#ffffff',
     fontWeight: '900',
+  },
+  dropdown: {
+    gap: 6,
+  },
+  dropdownButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  dropdownButtonDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  dropdownMenu: {
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dropdownMenuDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  dropdownOption: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  dropdownOptionText: {
+    color: BrandColors.lightInputText,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  dropdownValue: {
+    color: BrandColors.lightInputText,
+    fontSize: 15,
+    fontWeight: '800',
   },
   segmented: {
     backgroundColor: BrandColors.primarySoft,

@@ -6,12 +6,14 @@ const APP_PREFERENCES_KEY = 'diabeto.app-preferences.v1';
 
 export type AppearanceMode = 'system' | 'light' | 'dark';
 export type AccentTheme = 'sky' | 'mint' | 'violet' | 'coral';
+export type AppLanguage = 'system' | 'en' | 'ar';
 export type RibbonTone = 'warm' | 'cold' | 'aggressive' | 'casual';
 
 export type AppPreferences = {
   accentTheme: AccentTheme;
   appearanceMode: AppearanceMode;
   geminiApiKey: string;
+  language: AppLanguage;
   ribbonTone: RibbonTone;
 };
 
@@ -26,6 +28,7 @@ export const defaultPreferences: AppPreferences = {
   accentTheme: 'sky',
   appearanceMode: 'system',
   geminiApiKey: '',
+  language: 'system',
   ribbonTone: 'warm',
 };
 
@@ -165,6 +168,7 @@ function sanitizePreferences(value: Partial<AppPreferences>) {
       ? value.appearanceMode
       : defaultPreferences.appearanceMode,
     geminiApiKey: typeof value.geminiApiKey === 'string' ? value.geminiApiKey.trim() : '',
+    language: isAppLanguage(value.language) ? value.language : defaultPreferences.language,
     ribbonTone: isRibbonTone(value.ribbonTone) ? value.ribbonTone : defaultPreferences.ribbonTone,
   };
 }
@@ -175,6 +179,10 @@ function isAppearanceMode(value: unknown): value is AppearanceMode {
 
 function isAccentTheme(value: unknown): value is AccentTheme {
   return value === 'sky' || value === 'mint' || value === 'violet' || value === 'coral';
+}
+
+function isAppLanguage(value: unknown): value is AppLanguage {
+  return value === 'system' || value === 'en' || value === 'ar';
 }
 
 function isRibbonTone(value: unknown): value is RibbonTone {

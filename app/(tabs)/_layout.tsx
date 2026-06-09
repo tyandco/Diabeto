@@ -8,10 +8,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Colors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
+import { useI18n } from '@/lib/localization';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const accent = useAccentPalette();
+  const { text } = useI18n();
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
 
@@ -37,14 +39,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: text.tabs.home,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="predict"
         options={{
-          title: 'Predict',
+          title: text.tabs.predict,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
@@ -52,28 +54,28 @@ export default function TabLayout() {
         name="explore"
         options={{
           href: null,
-          title: 'Guide',
+          title: text.tabs.guide,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="fork.knife" color={color} />,
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Log',
+          title: text.tabs.log,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
+          title: text.tabs.chat,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: text.tabs.settings,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
         }}
       />
