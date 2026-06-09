@@ -6,7 +6,7 @@ const APP_PREFERENCES_KEY = 'diabeto.app-preferences.v1';
 
 export type AppearanceMode = 'system' | 'light' | 'dark';
 export type AccentTheme = 'sky' | 'mint' | 'violet' | 'coral';
-export type AppLanguage = 'system' | 'en' | 'ar';
+export type AppLanguage = 'system' | 'en' | 'ar' | 'es';
 export type RibbonTone = 'warm' | 'cold' | 'aggressive' | 'casual';
 
 export type AppPreferences = {
@@ -182,7 +182,7 @@ function isAccentTheme(value: unknown): value is AccentTheme {
 }
 
 function isAppLanguage(value: unknown): value is AppLanguage {
-  return value === 'system' || value === 'en' || value === 'ar';
+  return value === 'system' || value === 'en' || value === 'ar' || value === 'es';
 }
 
 function isRibbonTone(value: unknown): value is RibbonTone {

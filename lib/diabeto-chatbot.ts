@@ -1,6 +1,6 @@
 import { getRibbonToneInstruction, type RibbonTone } from '@/lib/app-preferences';
 
-type ChatLanguage = 'en' | 'ar';
+type ChatLanguage = 'en' | 'ar' | 'es';
 
 export type ChatImage = {
   base64: string;
@@ -87,14 +87,14 @@ export async function sendDiabetoChat(
   }
 
   const requestBody = JSON.stringify(
-    buildGeminiRequest(messages, healthContext ?? null, ribbonTone, dailyLogContext ?? null)
+    buildGeminiRequest(messages, healthContext ?? null, ribbonTone, dailyLogContext ?? null, language)
   );
   let lastError = chatErrors[language].genericGeminiFailure;
 
   const result = await fetchGemini(apiKey, requestBody);
 
   if (result.ok) {
-    const text = extractText(result.data);
+    const text = extractText(result.data, language);
     const finishReason = getFinishReason(result.data);
 
     if (finishReason === 'MAX_TOKENS' || isLikelyIncompleteReply(text)) {
@@ -135,7 +135,8 @@ function buildGeminiRequest(
   messages: ChatMessage[],
   healthContext: string | null,
   ribbonTone: RibbonTone,
-  dailyLogContext: string | null
+  dailyLogContext: string | null,
+  language: ChatLanguage
 ): GeminiRequest {
   const firstUserIndex = messages.findIndex((message) => message.role === 'user');
   const relevantMessages = (firstUserIndex >= 0 ? messages.slice(firstUserIndex) : messages).slice(-8);
@@ -155,6 +156,7 @@ function buildGeminiRequest(
       text: [
         SYSTEM_PROMPT.trim(),
         getRibbonToneInstruction(ribbonTone),
+        getLanguageInstruction(language),
         `Current date: ${formatCurrentDateForAI()}`,
         healthContext
           ? `Health: ${healthContext.trim().slice(0, 500)}`
@@ -192,7 +194,7 @@ function buildGeminiParts(message: ChatMessage): GeminiPart[] {
   return parts;
 }
 
-function extractText(data: GeminiResponse) {
+function extractText(data: GeminiResponse, language: ChatLanguage) {
   const text = data.candidates
     ?.flatMap((candidate) => candidate.content?.parts ?? [])
     .map((part) => part.text)
@@ -201,7 +203,7 @@ function extractText(data: GeminiResponse) {
     .trim();
 
   if (!text) {
-    throw new Error(chatErrors.en.noReply);
+    throw new Error(chatErrors[language].noReply);
   }
 
   return text;
@@ -283,6 +285,18 @@ function cleanGeminiError(message: string, language: ChatLanguage) {
   return message;
 }
 
+function getLanguageInstruction(language: ChatLanguage) {
+  switch (language) {
+    case 'ar':
+      return 'Response language: Arabic. Reply in Arabic even if the user writes in another language, unless the user explicitly asks for a different language.';
+    case 'es':
+      return 'Response language: Spanish. Reply in Spanish even if the user writes in another language, unless the user explicitly asks for a different language.';
+    case 'en':
+    default:
+      return 'Response language: English. Reply in English unless the user explicitly asks for a different language.';
+  }
+}
+
 function getRetrySeconds(message: string) {
   const match = message.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
 
@@ -319,6 +333,19 @@ const chatErrors = {
     shortRateLimit: (seconds: number) =>
       `وصل Gemini إلى حد مؤقت. انتظر حوالي ${seconds} ثانية، ثم أرسل مرة أخرى.`,
     stoppedEarly: (reason: string) => `[توقف Gemini مبكرا: ${reason}]`,
+  },
+  es: {
+    cutOff: '[Gemini pudo haber cortado esta respuesta. Envía "continuar" si quieres el resto.]',
+    genericGeminiFailure: 'Gemini no pudo responder ahora.',
+    invalidKey: 'Gemini dice que esta clave API no es válida. Revisa la clave de Gemini API guardada en Ajustes.',
+    missingKey: 'Añade tu clave de Gemini API en Ajustes antes de chatear con Ribbon.',
+    noFreeQuota:
+      'Gemini no tiene cuota gratuita disponible para este modelo o clave ahora. Inténtalo después del reinicio diario, activa la facturación o cambia de clave API.',
+    noReply: 'No pude crear una respuesta. Intenta preguntar de otra manera.',
+    quotaUnavailable: 'La cuota de Gemini no está disponible ahora. Espera unos minutos y vuelve a intentarlo.',
+    shortRateLimit: (seconds: number) =>
+      `Gemini alcanzó un límite temporal. Espera unos ${seconds} segundos y vuelve a enviar.`,
+    stoppedEarly: (reason: string) => `[Gemini se detuvo antes de tiempo: ${reason}]`,
   },
 };
 

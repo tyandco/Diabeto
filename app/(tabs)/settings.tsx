@@ -23,6 +23,7 @@ const languageOptions: { label: string; value: AppLanguage }[] = [
   { label: languageLabels.system, value: 'system' },
   { label: languageLabels.en, value: 'en' },
   { label: languageLabels.ar, value: 'ar' },
+  { label: languageLabels.es, value: 'es' },
 ];
 const toneOptions: RibbonTone[] = ['warm', 'cold', 'aggressive', 'casual'];
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';

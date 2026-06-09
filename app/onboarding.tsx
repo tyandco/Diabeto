@@ -15,11 +15,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  updateAppPreferences,
+  useAccentPalette,
+  useAppPreferences,
+  type AppLanguage,
+} from '@/lib/app-preferences';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
-import { useI18n } from '@/lib/localization';
+import { languageLabels, useI18n } from '@/lib/localization';
 import { markOnboardingComplete } from '@/lib/onboarding-status';
 
 const appIconImage = require('@/assets/images/icon.png');
@@ -48,6 +55,13 @@ const initialForm: FormState = {
   canMeasureGlucose: null,
   glucoseMgDl: '',
 };
+
+const languageOptions: { label: string; value: AppLanguage }[] = [
+  { label: languageLabels.system, value: 'system' },
+  { label: languageLabels.en, value: 'en' },
+  { label: languageLabels.ar, value: 'ar' },
+  { label: languageLabels.es, value: 'es' },
+];
 
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
@@ -193,7 +207,10 @@ export default function OnboardingScreen() {
 }
 
 function WelcomePage({ isDark }: { isDark: boolean }) {
+  const accent = useAccentPalette();
+  const preferences = useAppPreferences();
   const { text } = useI18n();
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
 
   return (
     <View style={styles.page}>
@@ -206,10 +223,94 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
         {text.onboarding.welcomeSubtitle}
       </ThemedText>
+      <View style={[styles.languageRow, isDark && styles.languageRowDark]}>
+        <ThemedText type="defaultSemiBold" style={styles.languageRowLabel}>
+          {text.settings.language}
+        </ThemedText>
+        <LanguageDropdown
+          accent={accent.primary}
+          isDark={isDark}
+          isOpen={isLanguageOpen}
+          onChange={(value) => {
+            updateAppPreferences({ language: value });
+            setIsLanguageOpen(false);
+          }}
+          onToggle={() => setIsLanguageOpen((current) => !current)}
+          options={languageOptions}
+          value={preferences.language}
+        />
+      </View>
       <InfoCard
         isDark={isDark}
         items={text.onboarding.welcomeItems}
       />
+    </View>
+  );
+}
+
+function LanguageDropdown<T extends string>({
+  accent,
+  isDark,
+  isOpen,
+  onChange,
+  onToggle,
+  options,
+  value,
+}: {
+  accent: string;
+  isDark: boolean;
+  isOpen: boolean;
+  onChange: (value: T) => void;
+  onToggle: () => void;
+  options: { label: string; value: T }[];
+  value: T;
+}) {
+  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <View style={styles.dropdown}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isOpen }}
+        onPress={onToggle}
+        style={[
+          styles.dropdownButton,
+          isDark && styles.dropdownButtonDark,
+          isOpen && { borderColor: accent },
+        ]}>
+        <ThemedText style={[styles.dropdownValue, isDark && styles.segmentTextDark]}>
+          {selectedOption.label}
+        </ThemedText>
+        <IconSymbol
+          color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText}
+          name="chevron.down"
+          size={22}
+        />
+      </Pressable>
+
+      {isOpen ? (
+        <View style={[styles.dropdownMenu, isDark && styles.dropdownMenuDark]}>
+          {options.map((option) => {
+            const selected = option.value === value;
+
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => onChange(option.value)}
+                style={[styles.dropdownOption, selected && { backgroundColor: accent }]}>
+                <ThemedText
+                  style={[
+                    styles.dropdownOptionText,
+                    isDark && styles.segmentTextDark,
+                    selected && styles.segmentTextActive,
+                  ]}>
+                  {option.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -717,7 +818,7 @@ function Checkbox({
         checked && isDark && styles.checkboxRowActiveDark,
       ]}>
       <View style={[styles.checkbox, checked && styles.checkboxActive]}>
-        {checked ? <ThemedText style={styles.checkmark}>Y</ThemedText> : null}
+        {checked ? <ThemedText style={styles.checkmark}>✓</ThemedText> : null}
       </View>
       <ThemedText type="defaultSemiBold" style={styles.checkboxText}>
         {label}
@@ -791,6 +892,79 @@ const styles = StyleSheet.create({
   },
   page: {
     gap: 20,
+  },
+  languageRow: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12,
+    zIndex: 5,
+  },
+  languageRowDark: {
+    backgroundColor: BrandColors.darkSurface,
+    borderColor: BrandColors.darkBorder,
+  },
+  languageRowLabel: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dropdown: {
+    flexBasis: 176,
+    flexGrow: 0,
+    flexShrink: 1,
+    gap: 6,
+    position: 'relative',
+    zIndex: 10,
+  },
+  dropdownButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 42,
+    paddingHorizontal: 11,
+  },
+  dropdownButtonDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  dropdownMenu: {
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'absolute',
+    right: 0,
+    top: 48,
+    width: '100%',
+    zIndex: 20,
+  },
+  dropdownMenuDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  dropdownOption: {
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 11,
+  },
+  dropdownOptionText: {
+    color: BrandColors.lightInputText,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  dropdownValue: {
+    color: BrandColors.lightInputText,
+    fontSize: 14,
+    fontWeight: '800',
   },
   progressRail: {
     alignItems: 'center',

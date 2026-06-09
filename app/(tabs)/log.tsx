@@ -283,7 +283,7 @@ function Counter({
   );
 }
 
-function formatDate(date: string, language: 'en' | 'ar') {
+function formatDate(date: string, language: 'en' | 'ar' | 'es') {
   return new Date(`${date}T00:00:00`).toLocaleDateString(language, {
     day: 'numeric',
     month: 'short',

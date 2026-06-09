@@ -181,7 +181,7 @@ export default function PredictScreen() {
               form.familyHistory && isDark && styles.checkboxRowActiveDark,
             ]}>
             <View style={[styles.checkbox, form.familyHistory && styles.checkboxActive]}>
-              {form.familyHistory ? <ThemedText style={styles.checkmark}>Y</ThemedText> : null}
+              {form.familyHistory ? <ThemedText style={styles.checkmark}>✓</ThemedText> : null}
             </View>
             <ThemedText type="defaultSemiBold">{text.onboarding.familyHistory}</ThemedText>
           </Pressable>
@@ -338,8 +338,20 @@ function riskStyle(riskLevel: string) {
 function translateSummary(
   riskLevel: 'Low' | 'Moderate' | 'High',
   score: number,
-  language: 'en' | 'ar'
+  language: 'en' | 'ar' | 'es'
 ) {
+  if (language === 'es') {
+    if (riskLevel === 'High') {
+      return `Tu riesgo estimado es alto (${score}/100). Esto no es un diagnóstico, pero conviene comentarlo con un profesional sanitario.`;
+    }
+
+    if (riskLevel === 'Moderate') {
+      return `Tu riesgo estimado es moderado (${score}/100). Mejorar los hábitos diarios puede reducir el riesgo con el tiempo.`;
+    }
+
+    return `Tu riesgo estimado es bajo (${score}/100). Sigue construyendo hábitos que apoyen una glucosa estable.`;
+  }
+
   if (language !== 'ar') {
     if (riskLevel === 'High') {
       return `Your estimated risk is high (${score}/100). This is not a diagnosis, but it is worth discussing with a healthcare professional.`;
@@ -366,9 +378,41 @@ function translateSummary(
 function translateAdvice(
   profile: DiabetesProfile,
   riskLevel: 'Low' | 'Moderate' | 'High',
-  language: 'en' | 'ar'
+  language: 'en' | 'ar' | 'es'
 ) {
   const bmi = profile.weightKg / ((profile.heightCm / 100) * (profile.heightCm / 100));
+
+  if (language === 'es') {
+    const advice = [
+      'Construye tus comidas alrededor de verduras, proteína magra, frijoles, lentejas, cereales integrales, frutos secos y bebidas sin azúcar.',
+      'Intenta hacer 150 minutos de actividad moderada cada semana, como caminar rápido, montar en bicicleta o nadar.',
+      'Elige fruta, yogur o frutos secos en lugar de dulces cuando quieras un snack.',
+    ];
+
+    if (bmi >= 25) {
+      advice.push('Un objetivo pequeño de pérdida de peso, incluso 5% a 7% del peso corporal, puede mejorar la sensibilidad a la insulina.');
+    }
+
+    if (typeof profile.glucoseMgDl === 'number' && profile.glucoseMgDl >= 100) {
+      advice.push('Tu valor de glucosa está elevado, así que considera revisar glucosa en ayunas o A1C con un clínico.');
+    } else if (!profile.canMeasureGlucose) {
+      advice.push('Si es posible, pregunta en una clínica o farmacia por una prueba de glucosa en ayunas o A1C para tener una imagen más clara.');
+    }
+
+    if (profile.sugaryDrinks !== 'rarely') {
+      advice.push('Cambia refrescos, té dulce, jugos y bebidas energéticas por agua o té sin azúcar la mayoría de los días.');
+    }
+
+    if (profile.activityLevel === 'low') {
+      advice.push('Empieza con una caminata de 10 minutos después de una comida al día, y aumenta poco a poco.');
+    }
+
+    if (profile.familyHistory || riskLevel === 'High') {
+      advice.push('Como tus factores de riesgo son más fuertes, programa revisiones regulares y pregunta por un plan de prevención.');
+    }
+
+    return advice.slice(0, 6);
+  }
 
   if (language !== 'ar') {
     return predictDiabetesRisk(profile).advice;

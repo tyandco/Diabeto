@@ -2,12 +2,13 @@ import { getLocales } from 'expo-localization';
 
 import { useAppPreferences, type AppLanguage } from '@/lib/app-preferences';
 
-type SupportedLanguage = 'en' | 'ar';
+type SupportedLanguage = 'en' | 'ar' | 'es';
 
 export const languageLabels: Record<AppLanguage, string> = {
   system: 'System',
   en: 'English',
   ar: 'العربية',
+  es: 'Español',
 };
 
 const en = {
@@ -215,6 +216,214 @@ const en = {
     enterValid: 'Enter valid numbers to see your prediction.',
     disclaimer: 'This app is for education only and does not diagnose diabetes.',
     riskLevels: { Low: 'Low', Moderate: 'Moderate', High: 'High' },
+  },
+};
+
+const es: typeof en = {
+  common: {
+    appName: 'Diabeto',
+    back: 'Atrás',
+    cancel: 'Cancelar',
+    clear: 'Borrar',
+    continue: 'Continuar',
+    no: 'No',
+    optional: 'Opcional',
+    paste: 'Pegar',
+    remove: 'Quitar',
+    save: 'Guardar',
+    send: 'Enviar',
+    wait: 'Espera',
+    yes: 'Sí',
+  },
+  tabs: {
+    chat: 'Chat',
+    guide: 'Guía',
+    home: 'Inicio',
+    log: 'Registro',
+    predict: 'Predicción',
+    settings: 'Ajustes',
+  },
+  home: {
+    subtitle: 'Controla el riesgo, entiende tus comidas y conversa sobre mejores decisiones de salud.',
+    today: 'Hoy',
+    quickRiskCheck: 'Empieza con una revisión rápida del riesgo.',
+    predictionHelps: 'Tus datos de predicción también ayudan a Ribbon a dar consejos más específicos sobre comida y hábitos.',
+    openPredict: 'Abrir predicción',
+    guideBody: 'Ideas de comidas equilibradas y objetivos de hábitos simples.',
+    dailyLog: 'Registro diario',
+    dailyLogBody: 'Registra glucosa, sueño, actividad, agua, comidas y notas.',
+    chatBody: 'Pregunta a Ribbon sobre comidas, snacks, hábitos o fotos de alimentos.',
+    settingsBody: 'Ajusta apariencia, idioma, colores y tono de Ribbon.',
+    disclaimer: 'Diabeto es educativo y no sustituye el diagnóstico ni la atención médica.',
+  },
+  onboarding: {
+    pageTitles: ['Bienvenida', 'Términos', 'Datos de salud', 'Acceso a glucosa', 'Ribbon'],
+    startDiabeto: 'Empezar Diabeto',
+    welcomeSubtitle:
+      'Un asistente de prevención de diabetes que estima el riesgo y da consejos prácticos de hábitos a partir de datos de salud simples.',
+    welcomeItems: [
+      'Estimación rápida del riesgo basada en estilo de vida',
+      'Consejos personales según tus datos',
+      'Chat opcional con IA para comidas e imágenes de alimentos',
+    ],
+    beforeStart: 'Antes de empezar',
+    termsTitle: 'Términos de servicio',
+    termsBody:
+      'Diabeto es solo para educación y apoyo en prevención. No diagnostica diabetes, no reemplaza a un médico ni ofrece atención de emergencia.',
+    termsResponsibility:
+      'Eres responsable de revisar las decisiones importantes de salud con un profesional sanitario cualificado.',
+    privacyTitle: 'Política de privacidad',
+    privacyBody:
+      'Diabeto usa los datos que introduces para estimar el riesgo y personalizar las respuestas del asistente de IA. Los mensajes de chat y las imágenes seleccionadas pueden enviarse a la API de Gemini configurada.',
+    privacyWarning:
+      'No subas documentos médicos privados, identificaciones ni fotos que no quieras que procese el proveedor de IA.',
+    agreeTerms: 'Acepto los Términos de servicio',
+    understandPrivacy: 'Entiendo la Política de privacidad',
+    yourDetails: 'Tus datos',
+    detailsHelp: 'Estos datos ayudan a Diabeto a hacer una primera estimación. Puedes ajustarlos después.',
+    age: 'Edad',
+    height: 'Altura',
+    weight: 'Peso',
+    years: 'años',
+    activity: 'Actividad',
+    low: 'Baja',
+    moderate: 'Moderada',
+    high: 'Alta',
+    sugaryDrinks: 'Bebidas azucaradas',
+    rarely: 'Rara vez',
+    sometimes: 'A veces',
+    often: 'A menudo',
+    familyHistory: 'Antecedentes familiares de diabetes',
+    glucoseAccess: 'Acceso a glucosa',
+    glucoseHelp: 'No todo el mundo puede medir la glucosa en casa. Diabeto no exige un valor de glucosa.',
+    canMeasureGlucose: '¿Puedes medir tu glucosa en sangre ahora?',
+    glucose: 'Glucosa',
+    whatThisMeans: 'Qué significa esto',
+    glucoseMeaning:
+      'Si no puedes medir la glucosa, Diabeto estima el riesgo usando edad, IMC, antecedentes familiares, actividad y hábitos de bebidas azucaradas. Una prueba de glucosa o A1C puede aclarar mejor el panorama más adelante.',
+    meetRibbon: 'Conoce a Ribbon',
+    ribbonBody:
+      'Ribbon es tu acompañante de salud en Diabeto. Puede ayudarte a convertir tu estimación de riesgo en ideas prácticas de comidas, cambios de alimentos, objetivos de actividad y hábitos diarios más seguros.',
+    ribbonItems: [
+      'Usa tus datos de salud guardados cuando chateas',
+      'Puede revisar imágenes de comida o bebida que adjuntes',
+      'Requiere tu propia clave de Gemini API de Google AI Studio',
+      'Pega la clave en Ajustes antes de usar el chat',
+      'Mantiene los consejos educativos, útiles y prácticos',
+    ],
+  },
+  settings: {
+    title: 'Ajustes',
+    subtitle: 'Personaliza Diabeto y Ribbon.',
+    geminiApiKey: 'Clave de Gemini API',
+    keyHelp: 'Ribbon usa tu propia clave de Google AI Studio. Permanece en este dispositivo.',
+    keyPlaceholder: 'Pega la clave de Gemini API',
+    getApiKey: 'Obtener una clave API',
+    appearance: 'Apariencia',
+    system: 'Sistema',
+    light: 'Claro',
+    dark: 'Oscuro',
+    language: 'Idioma',
+    colorTheme: 'Tema de color',
+    colorThemeLabels: {
+      sky: 'Cielo',
+      mint: 'Menta',
+      violet: 'Violeta',
+      coral: 'Coral',
+    },
+    ribbonTone: 'Tono de Ribbon',
+    ribbonToneLabels: {
+      warm: 'Cálido',
+      cold: 'Profesional',
+      aggressive: 'Agresivo',
+      casual: 'Casual',
+    },
+    ribbonToneDescriptions: {
+      warm: 'Predeterminado',
+      cold: 'conciso, neutral y directo',
+      aggressive: 'ADVERTENCIA: Ribbon será muy dura si muestras comida poco saludable.',
+      casual: 'diseñado para conversaciones relajadas y actuales',
+    },
+  },
+  chat: {
+    starter:
+      'Hola, soy Ribbon. Puedo ayudarte a planificar comidas equilibradas, entender elecciones de alimentos, revisar imágenes y crear hábitos que reduzcan el riesgo de diabetes.',
+    subtitle: 'Tu acompañante de salud de Diabeto.',
+    keyNeeded: 'Se necesita una clave de Gemini API',
+    usingAll: 'Usando datos de Predicción, registros diarios y memoria del chat',
+    usingMemory: 'Usando solo la memoria del chat',
+    keyPanelTitle: 'Ribbon necesita tu clave de Gemini API.',
+    keyPanelBody: 'Crea una clave en Google AI Studio, cópiala y pégala en Ajustes.',
+    openSettings: 'Abrir Ajustes',
+    attachImage: 'Adjuntar imagen',
+    attachImageMessage: 'Elige de dónde debe venir la imagen.',
+    takePhoto: 'Tomar foto',
+    choosePhoto: 'Elegir foto',
+    photoAccessNeeded: 'Se necesita acceso a fotos para que Ribbon pueda revisar una imagen de tu biblioteca.',
+    cameraAccessNeeded: 'Se necesita acceso a la cámara para que Ribbon pueda revisar una foto nueva.',
+    imageTooLarge: 'Esa imagen es demasiado grande. Elige una foto más pequeña.',
+    imageFailed: 'No pude procesar esa imagen. Elige otra foto.',
+    addKeyBeforeChat: 'Añade tu clave de Gemini API en Ajustes antes de chatear con Ribbon.',
+    imageReviewPrompt: 'Revisa esta imagen y da consejos de prevención de diabetes.',
+    fallbackError: 'El chatbot no pudo responder ahora. Inténtalo de nuevo.',
+    promptPlaceholder: 'Pregunta sobre comidas, hábitos o una imagen...',
+    imageAttached: 'Imagen adjunta',
+    imageReady: 'Lista para que Ribbon la revise.',
+    attach: 'Adjuntar',
+    typing: 'Ribbon está preparando una respuesta...',
+    quickPrompts: ['Sugerir desayuno', 'Sugerir almuerzo', 'Sugerir cena', 'Ideas de snacks saludables'],
+  },
+  log: {
+    title: 'Registro diario',
+    subtitle: 'Historial para Ribbon y para tu propia revisión.',
+    noLogs: 'Aún no hay registros',
+    emptyHelp: 'Toca Registrar tu día para añadir la instantánea de salud de hoy.',
+    logYourDay: 'Registrar tu día',
+    glucose: 'Glucosa',
+    activity: 'Actividad',
+    sleep: 'Sueño',
+    water: 'Agua',
+    balancedMeals: 'Comidas equilibradas',
+    mood: 'Ánimo',
+    notesPlaceholder: 'Comidas, antojos, ejercicio, síntomas...',
+    saveLog: 'Guardar registro',
+    noGlucose: 'Sin glucosa',
+    noSleep: 'Sin sueño',
+    moods: { steady: 'Estable', good: 'Bien', tired: 'Cansado', stressed: 'Estresado' },
+  },
+  guide: {
+    title: 'Guía',
+    subtitle: 'Objetivos simples de alimentación y estilo de vida para reducir el riesgo de diabetes.',
+    eatTitle: 'Qué comer',
+    mealIdeas: [
+      'Desayuno: avena con frutos rojos, yogur natural y frutos secos.',
+      'Almuerzo: pollo a la plancha o frijoles con ensalada y arroz integral.',
+      'Cena: pescado, lentejas o tofu con verduras y una porción pequeña de cereal integral.',
+      'Snack: rodajas de manzana, huevos cocidos, hummus con zanahorias o frutos secos sin sal.',
+    ],
+    doTitle: 'Qué hacer',
+    habitIdeas: [
+      'Camina de 10 a 20 minutos después de las comidas cuando sea posible.',
+      'Ten agua cerca y evita comprar bebidas azucaradas para casa.',
+      'Duerme de 7 a 9 horas porque dormir mal puede aumentar antojos y niveles de glucosa.',
+      'Revisa tendencias de peso, actividad y glucosa cada semana en vez de juzgar un solo día.',
+    ],
+    modelTitle: 'Sobre el modelo',
+    modelBody:
+      'Diabeto usa un modelo local ligero de puntuación basado en factores de riesgo comunes: edad, IMC, glucosa, antecedentes familiares, nivel de actividad y consumo de bebidas azucaradas.',
+    modelFuture:
+      'Una versión futura puede conectar esta pantalla a un modelo Python entrenado o a un modelo de IA en la nube cuando tengas un conjunto de datos real y decidas dónde deben ejecutarse las predicciones.',
+  },
+  predict: {
+    subtitle: 'Predicción de riesgo de diabetes estilo IA y consejos de hábitos.',
+    yourDetails: 'Tus datos',
+    canMeasureGlucose: '¿Puedes medir glucosa ahora?',
+    prediction: 'Predicción',
+    bmi: 'IMC',
+    personalAdvice: 'Consejos personales',
+    enterValid: 'Introduce números válidos para ver tu predicción.',
+    disclaimer: 'Esta app es solo educativa y no diagnostica diabetes.',
+    riskLevels: { Low: 'Bajo', Moderate: 'Moderado', High: 'Alto' },
   },
 };
 
@@ -426,7 +635,7 @@ const ar: typeof en = {
   },
 };
 
-export const translations = { en, ar };
+export const translations = { en, ar, es };
 
 export function resolveLanguage(preference: AppLanguage): SupportedLanguage {
   if (preference !== 'system') {
@@ -434,7 +643,16 @@ export function resolveLanguage(preference: AppLanguage): SupportedLanguage {
   }
 
   const locale = getLocales()[0];
-  return locale?.languageCode === 'ar' ? 'ar' : 'en';
+
+  if (locale?.languageCode === 'ar') {
+    return 'ar';
+  }
+
+  if (locale?.languageCode === 'es') {
+    return 'es';
+  }
+
+  return 'en';
 }
 
 export function useI18n() {
