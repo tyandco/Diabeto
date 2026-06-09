@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_COMPLETE_KEY = 'diabeto.onboarding-complete.v1';
 const HEALTH_CONTEXT_KEY = 'diabeto.health-context.v1';
-const ONBOARDING_TESTING_MODE = true;
+const ONBOARDING_TESTING_MODE = false;
 
 export async function hasCompletedOnboarding() {
   if (ONBOARDING_TESTING_MODE) {

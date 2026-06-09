@@ -62,6 +62,10 @@ const languageOptions: { label: string; value: AppLanguage }[] = [
   { label: languageLabels.ar, value: 'ar' },
   { label: languageLabels.es, value: 'es' },
 ];
+const secretLanguageOption: { label: string; value: AppLanguage } = {
+  label: languageLabels.secret,
+  value: 'secret',
+};
 
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
@@ -211,6 +215,9 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
   const preferences = useAppPreferences();
   const { text } = useI18n();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const availableLanguageOptions = preferences.secretLanguageUnlocked
+    ? [...languageOptions, secretLanguageOption]
+    : languageOptions;
 
   return (
     <View style={styles.page}>
@@ -236,7 +243,7 @@ function WelcomePage({ isDark }: { isDark: boolean }) {
             setIsLanguageOpen(false);
           }}
           onToggle={() => setIsLanguageOpen((current) => !current)}
-          options={languageOptions}
+          options={availableLanguageOptions}
           value={preferences.language}
         />
       </View>
@@ -376,7 +383,7 @@ function HealthPage({
   isDark: boolean;
   update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
 }) {
-  const { text } = useI18n();
+  const { language, text } = useI18n();
 
   return (
     <View style={styles.page}>
@@ -386,8 +393,8 @@ function HealthPage({
       </ThemedText>
       <View style={styles.grid}>
         <Field label={text.onboarding.age} value={form.age} onChangeText={(value) => update('age', value)} suffix={text.onboarding.years} isDark={isDark} />
-        <Field label={text.onboarding.height} value={form.heightCm} onChangeText={(value) => update('heightCm', value)} suffix="cm" isDark={isDark} />
-        <Field label={text.onboarding.weight} value={form.weightKg} onChangeText={(value) => update('weightKg', value)} suffix="kg" isDark={isDark} />
+        <Field label={text.onboarding.height} value={form.heightCm} onChangeText={(value) => update('heightCm', value)} suffix={language === 'secret' ? 'mrrrow' : 'cm'} isDark={isDark} />
+        <Field label={text.onboarding.weight} value={form.weightKg} onChangeText={(value) => update('weightKg', value)} suffix={language === 'secret' ? 'purr' : 'kg'} isDark={isDark} />
       </View>
       <OptionGroup
         label={text.onboarding.activity}
@@ -430,7 +437,7 @@ function GlucosePage({
   isDark: boolean;
   update: <Key extends keyof FormState>(key: Key, value: FormState[Key]) => void;
 }) {
-  const { text } = useI18n();
+  const { language, text } = useI18n();
 
   return (
     <View style={styles.page}>
@@ -453,7 +460,7 @@ function GlucosePage({
           label={text.onboarding.glucose}
           value={form.glucoseMgDl}
           onChangeText={(value) => update('glucoseMgDl', value)}
-          suffix="mg/dL"
+          suffix={language === 'secret' ? 'hiss?' : 'mg/dL'}
           isDark={isDark}
         />
       ) : null}

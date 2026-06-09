@@ -1,25 +1,53 @@
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getAppIconSource, useAccentPalette } from '@/lib/app-preferences';
+import {
+  getAppIconSource,
+  updateAppPreferences,
+  useAccentPalette,
+  useAppPreferences,
+} from '@/lib/app-preferences';
 import { useI18n } from '@/lib/localization';
 
 export default function HomeScreen() {
   const isDark = useColorScheme() === 'dark';
   const accent = useAccentPalette();
+  const preferences = useAppPreferences();
   const router = useRouter();
   const { text } = useI18n();
+  const [, setIconTapCount] = useState(0);
+
+  const handleIconPress = () => {
+    if (preferences.secretLanguageUnlocked) {
+      return;
+    }
+
+    setIconTapCount((current) => {
+      const nextCount = current + 1;
+
+      if (nextCount >= 5) {
+        updateAppPreferences({ secretLanguageUnlocked: true });
+        Alert.alert('meow!', 'mrrp meow purr.');
+        return 0;
+      }
+
+      return nextCount;
+    });
+  };
 
   return (
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Image source={getAppIconSource()} style={styles.heroIcon} />
+          <Pressable accessibilityLabel="Diabeto app icon" onPress={handleIconPress}>
+            <Image source={getAppIconSource()} style={styles.heroIcon} />
+          </Pressable>
           <View style={styles.heroCopy}>
             <ThemedText type="title">Diabeto</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>

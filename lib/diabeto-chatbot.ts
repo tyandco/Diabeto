@@ -1,6 +1,6 @@
 import { getRibbonToneInstruction, type RibbonTone } from '@/lib/app-preferences';
 
-type ChatLanguage = 'en' | 'ar' | 'es';
+type ChatLanguage = 'en' | 'ar' | 'es' | 'secret';
 
 export type ChatImage = {
   base64: string;
@@ -155,7 +155,7 @@ function buildGeminiRequest(
     firstUserMessage.parts.unshift({
       text: [
         SYSTEM_PROMPT.trim(),
-        getRibbonToneInstruction(ribbonTone),
+        language === 'secret' ? getSecretToneInstruction(ribbonTone) : getRibbonToneInstruction(ribbonTone),
         getLanguageInstruction(language),
         `Current date: ${formatCurrentDateForAI()}`,
         healthContext
@@ -164,7 +164,7 @@ function buildGeminiRequest(
         dailyLogContext
           ? `Recent logs:\n${dailyLogContext.trim().slice(0, 700)}`
           : 'No daily log history was provided by the app yet.',
-        'Use any attached image if present.',
+        getImageInstruction(language),
       ].join('\n\n'),
     });
   }
@@ -282,7 +282,7 @@ function cleanGeminiError(message: string, language: ChatLanguage) {
     return errors.quotaUnavailable;
   }
 
-  return message;
+  return language === 'secret' ? errors.genericGeminiFailure : message;
 }
 
 function getLanguageInstruction(language: ChatLanguage) {
@@ -291,9 +291,40 @@ function getLanguageInstruction(language: ChatLanguage) {
       return 'Response language: Arabic. Reply in Arabic even if the user writes in another language, unless the user explicitly asks for a different language.';
     case 'es':
       return 'Response language: Spanish. Reply in Spanish even if the user writes in another language, unless the user explicitly asks for a different language.';
+    case 'secret':
+      return 'Response language: cat language. Reply only with these tokens: meow, mew, mrrrow, mrrp, prrr, purr, hiss, and punctuation. Do not use numbers, normal English words, insults, slurs, food names, or medical words.';
     case 'en':
     default:
       return 'Response language: English. Reply in English unless the user explicitly asks for a different language.';
+  }
+}
+
+function getImageInstruction(language: ChatLanguage) {
+  if (language === 'secret') {
+    return [
+      'Use any attached image if present.',
+      'Special cat-language image reaction: if the attached image visibly contains fish, start the reply with an extra excited cat reaction using only allowed cat tokens, such as "mrrrow!!! meow meow! prrr purr purr!"',
+      'After that reaction, continue in the selected cat tone using only allowed cat tokens and punctuation. Do not count, number items, or output digits.',
+    ].join(' ');
+  }
+
+  return 'Use any attached image if present.';
+}
+
+function getSecretToneInstruction(tone: RibbonTone) {
+  const base =
+    'Tone: cat language only. Use only these tokens: meow, mew, mrrrow, mrrp, prrr, purr, hiss, and punctuation. No numbers, normal words, insults, slurs, or profanity.';
+
+  switch (tone) {
+    case 'cold':
+      return `${base} Cold tone means short, sparse, neutral cat sounds. Prefer "mrrp", "mew", and brief punctuation.`;
+    case 'aggressive':
+      return `${base} Aggressive tone means sharp warning cat sounds. Use more "hiss", "mrrrow", exclamation marks, and short urgent bursts, but still no normal words or insults.`;
+    case 'casual':
+      return `${base} Casual tone means playful relaxed cat sounds. Use more "meow", "mew", "purr", and loose punctuation.`;
+    case 'warm':
+    default:
+      return `${base} Warm tone means gentle supportive cat sounds. Use more "purr", "meow", and calm punctuation.`;
   }
 }
 
@@ -346,6 +377,19 @@ const chatErrors = {
     shortRateLimit: (seconds: number) =>
       `Gemini alcanzó un límite temporal. Espera unos ${seconds} segundos y vuelve a enviar.`,
     stoppedEarly: (reason: string) => `[Gemini se detuvo antes de tiempo: ${reason}]`,
+  },
+  secret: {
+    cutOff: 'mrrp mrrp. meow mew.',
+    genericGeminiFailure: 'mrrrow mew hiss.',
+    invalidKey: 'hiss hiss mrrp.',
+    missingKey: 'mrrp mew hiss.',
+    noFreeQuota:
+      'hiss hiss mrrp. mew mrrrow purr.',
+    noReply: 'mew mrrp hiss?',
+    quotaUnavailable: 'hiss mrrp mew. purr purr mrrrow.',
+    shortRateLimit: (seconds: number) =>
+      `mrrp purr ${seconds}. meow mrrrow.`,
+    stoppedEarly: () => 'hiss mrrp mew.',
   },
 };
 

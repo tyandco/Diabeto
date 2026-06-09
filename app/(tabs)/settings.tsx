@@ -25,6 +25,10 @@ const languageOptions: { label: string; value: AppLanguage }[] = [
   { label: languageLabels.ar, value: 'ar' },
   { label: languageLabels.es, value: 'es' },
 ];
+const secretLanguageOption: { label: string; value: AppLanguage } = {
+  label: languageLabels.secret,
+  value: 'secret',
+};
 const toneOptions: RibbonTone[] = ['warm', 'cold', 'aggressive', 'casual'];
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 
@@ -34,6 +38,9 @@ export default function SettingsScreen() {
   const isDark = useColorScheme() === 'dark';
   const { text } = useI18n();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const availableLanguageOptions = preferences.secretLanguageUnlocked
+    ? [...languageOptions, secretLanguageOption]
+    : languageOptions;
   const appearanceOptions: { label: string; value: AppearanceMode }[] = [
     { label: text.settings.system, value: 'system' },
     { label: text.settings.light, value: 'light' },
@@ -107,7 +114,7 @@ export default function SettingsScreen() {
               updateAppPreferences({ language: value });
               setIsLanguageOpen(false);
             }}
-            options={languageOptions}
+            options={availableLanguageOptions}
             onToggle={() => setIsLanguageOpen((current) => !current)}
             value={preferences.language}
           />

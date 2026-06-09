@@ -112,14 +112,14 @@ export default function PredictScreen() {
               label={text.onboarding.height}
               value={form.heightCm}
               onChangeText={(value) => update('heightCm', value)}
-              suffix="cm"
+              suffix={language === 'secret' ? 'mrrrow' : 'cm'}
               isDark={isDark}
             />
             <Field
               label={text.onboarding.weight}
               value={form.weightKg}
               onChangeText={(value) => update('weightKg', value)}
-              suffix="kg"
+              suffix={language === 'secret' ? 'purr' : 'kg'}
               isDark={isDark}
             />
           </View>
@@ -140,7 +140,7 @@ export default function PredictScreen() {
               label={text.onboarding.glucose}
               value={form.glucoseMgDl}
               onChangeText={(value) => update('glucoseMgDl', value)}
-              suffix="mg/dL"
+              suffix={language === 'secret' ? 'hiss?' : 'mg/dL'}
               isDark={isDark}
             />
             </View>
@@ -338,8 +338,20 @@ function riskStyle(riskLevel: string) {
 function translateSummary(
   riskLevel: 'Low' | 'Moderate' | 'High',
   score: number,
-  language: 'en' | 'ar' | 'es'
+  language: 'en' | 'ar' | 'es' | 'secret'
 ) {
+  if (language === 'secret') {
+    if (riskLevel === 'High') {
+      return `hiss mrrrow ${score}/100.`;
+    }
+
+    if (riskLevel === 'Moderate') {
+      return `mrrp meow ${score}/100.`;
+    }
+
+    return `purr mew ${score}/100.`;
+  }
+
   if (language === 'es') {
     if (riskLevel === 'High') {
       return `Tu riesgo estimado es alto (${score}/100). Esto no es un diagnóstico, pero conviene comentarlo con un profesional sanitario.`;
@@ -378,9 +390,41 @@ function translateSummary(
 function translateAdvice(
   profile: DiabetesProfile,
   riskLevel: 'Low' | 'Moderate' | 'High',
-  language: 'en' | 'ar' | 'es'
+  language: 'en' | 'ar' | 'es' | 'secret'
 ) {
   const bmi = profile.weightKg / ((profile.heightCm / 100) * (profile.heightCm / 100));
+
+  if (language === 'secret') {
+    const advice = [
+      'meow mew mrrp purr.',
+      'mrrp purr 150.',
+      'mew meow purr. hiss hiss.',
+    ];
+
+    if (bmi >= 25) {
+      advice.push('purr 5-7% mrrrow.');
+    }
+
+    if (typeof profile.glucoseMgDl === 'number' && profile.glucoseMgDl >= 100) {
+      advice.push('hiss mrrp 100. mew mew.');
+    } else if (!profile.canMeasureGlucose) {
+      advice.push('mrrp mew? purr purr.');
+    }
+
+    if (profile.sugaryDrinks !== 'rarely') {
+      advice.push('hiss hiss. meow purr.');
+    }
+
+    if (profile.activityLevel === 'low') {
+      advice.push('mew mrrrow 10.');
+    }
+
+    if (profile.familyHistory || riskLevel === 'High') {
+      advice.push('mrrrow hiss mew.');
+    }
+
+    return advice.slice(0, 6);
+  }
 
   if (language === 'es') {
     const advice = [

@@ -105,7 +105,7 @@ export default function DailyLogScreen() {
                   label={text.log.glucose}
                   onChangeText={(value) => update('glucoseMgDl', value)}
                   placeholder={text.common.optional}
-                  suffix="mg/dL"
+                  suffix={language === 'secret' ? 'hiss?' : 'mg/dL'}
                   value={draft.glucoseMgDl}
                 />
                 <Field
@@ -113,7 +113,7 @@ export default function DailyLogScreen() {
                   label={text.log.activity}
                   onChangeText={(value) => update('activityMinutes', value)}
                   placeholder="0"
-                  suffix="min"
+                  suffix={language === 'secret' ? 'mrrp' : 'min'}
                   value={draft.activityMinutes}
                 />
                 <Field
@@ -121,7 +121,7 @@ export default function DailyLogScreen() {
                   label={text.log.sleep}
                   onChangeText={(value) => update('sleepHours', value)}
                   placeholder="0"
-                  suffix="hours"
+                  suffix={language === 'secret' ? 'purr' : 'hours'}
                   value={draft.sleepHours}
                 />
               </View>
@@ -130,7 +130,7 @@ export default function DailyLogScreen() {
                 accent={accent.primary}
                 label={text.log.water}
                 onChange={(value) => update('waterCups', value)}
-                suffix="cups"
+                suffix={language === 'secret' ? 'mew' : 'cups'}
                 value={draft.waterCups}
               />
               <Counter
@@ -138,7 +138,7 @@ export default function DailyLogScreen() {
                 label={text.log.balancedMeals}
                 max={6}
                 onChange={(value) => update('balancedMeals', value)}
-                suffix="meals"
+                suffix={language === 'secret' ? 'meow' : 'meals'}
                 value={draft.balancedMeals}
               />
 
@@ -190,9 +190,9 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
   const { language, text } = useI18n();
   const { log } = entry;
   const stats = [
-    log.glucoseMgDl ? `${log.glucoseMgDl} mg/dL` : text.log.noGlucose,
-    `${log.activityMinutes || '0'} min`,
-    log.sleepHours ? `${log.sleepHours}h ${text.log.sleep}` : text.log.noSleep,
+    log.glucoseMgDl ? `${log.glucoseMgDl} ${language === 'secret' ? 'hiss?' : 'mg/dL'}` : text.log.noGlucose,
+    `${log.activityMinutes || '0'} ${language === 'secret' ? 'mrrp' : 'min'}`,
+    log.sleepHours ? `${log.sleepHours}h ${language === 'secret' ? 'purr' : text.log.sleep}` : text.log.noSleep,
     `${log.waterCups} ${text.log.water}`,
     `${log.balancedMeals} ${text.log.balancedMeals}`,
   ];
@@ -283,7 +283,11 @@ function Counter({
   );
 }
 
-function formatDate(date: string, language: 'en' | 'ar' | 'es') {
+function formatDate(date: string, language: 'en' | 'ar' | 'es' | 'secret') {
+  if (language === 'secret') {
+    return date;
+  }
+
   return new Date(`${date}T00:00:00`).toLocaleDateString(language, {
     day: 'numeric',
     month: 'short',
