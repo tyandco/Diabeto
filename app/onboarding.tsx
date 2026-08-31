@@ -2,9 +2,12 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  ActivityIndicator,
   Easing,
   Image,
+  KeyboardAvoidingView,
   LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,6 +27,7 @@ import {
   useAppPreferences,
   type AppLanguage,
 } from '@/lib/app-preferences';
+import { useAuth } from '@/lib/auth-context';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { saveHealthContext } from '@/lib/health-context';
 import { languageLabels, useI18n } from '@/lib/localization';
@@ -70,6 +74,7 @@ const secretLanguageOption: { label: string; value: AppLanguage } = {
 export default function OnboardingScreen() {
   const isDark = useColorScheme() === 'dark';
   const { text } = useI18n();
+  const auth = useAuth();
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -80,6 +85,7 @@ export default function OnboardingScreen() {
   const pageTranslateX = useRef(new Animated.Value(0)).current;
 
   const profile = useMemo(() => parseProfile(form), [form]);
+  const pageTitles = useMemo(() => [...text.onboarding.pageTitles, 'Account'], [text.onboarding.pageTitles]);
   const canContinue = getCanContinue(page, acceptedTerms, acceptedPrivacy, form, profile);
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
@@ -106,18 +112,7 @@ export default function OnboardingScreen() {
     ]).start();
   }, [direction, page, pageOpacity, pageTranslateX]);
 
-  const next = async () => {
-    if (!canContinue) {
-      return;
-    }
-
-    if (page < text.onboarding.pageTitles.length - 1) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setDirection(1);
-      setPage((current) => current + 1);
-      return;
-    }
-
+  const finishOnboarding = async () => {
     if (!profile) {
       return;
     }
@@ -131,6 +126,21 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
+  const next = async () => {
+    if (!canContinue) {
+      return;
+    }
+
+    if (page < pageTitles.length - 1) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setDirection(1);
+      setPage((current) => current + 1);
+      return;
+    }
+
+    await finishOnboarding();
+  };
+
   const back = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setDirection(-1);
@@ -139,36 +149,46 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Animated.View
-          key={page}
-          style={[
-            styles.pageTransition,
-            {
-              opacity: pageOpacity,
-              transform: [{ translateX: pageTranslateX }],
-            },
-          ]}>
-          {page === 0 ? <WelcomePage isDark={isDark} /> : null}
-          {page === 1 ? (
-            <TermsPage
-              acceptedPrivacy={acceptedPrivacy}
-              acceptedTerms={acceptedTerms}
-              isDark={isDark}
-              setAcceptedPrivacy={setAcceptedPrivacy}
-              setAcceptedTerms={setAcceptedTerms}
-            />
-          ) : null}
-          {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
-          {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
-          {page === 4 ? <RibbonPage isDark={isDark} /> : null}
-        </Animated.View>
-
-      </ScrollView>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Animated.View
+            key={page}
+            style={[
+              styles.pageTransition,
+              {
+                opacity: pageOpacity,
+                transform: [{ translateX: pageTranslateX }],
+              },
+            ]}>
+            {page === 0 ? <WelcomePage isDark={isDark} /> : null}
+            {page === 1 ? (
+              <TermsPage
+                acceptedPrivacy={acceptedPrivacy}
+                acceptedTerms={acceptedTerms}
+                isDark={isDark}
+                setAcceptedPrivacy={setAcceptedPrivacy}
+                setAcceptedTerms={setAcceptedTerms}
+              />
+            ) : null}
+            {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
+            {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
+            {page === 4 ? <RibbonPage isDark={isDark} /> : null}
+            {page === 5 ? (
+              <OnboardingAccountPage
+                auth={auth}
+                finishOnboarding={finishOnboarding}
+                isDark={isDark}
+              />
+            ) : null}
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={[styles.progressRail, isDark && styles.progressRailDark]}>
         <View style={styles.progressRow}>
-          {text.onboarding.pageTitles.map((title, index) => {
+          {pageTitles.map((title, index) => {
             const isCurrent = index === page;
 
             return (
@@ -197,14 +217,14 @@ export default function OnboardingScreen() {
             <ThemedText style={styles.secondaryButtonText}>{text.common.back}</ThemedText>
           </Pressable>
         ) : null}
-        <Pressable
-          disabled={!canContinue}
-          onPress={next}
-          style={[styles.button, !canContinue && styles.buttonDisabled]}>
-          <ThemedText style={styles.buttonText}>
-            {page === text.onboarding.pageTitles.length - 1 ? text.onboarding.startDiabeto : text.common.continue}
-          </ThemedText>
-        </Pressable>
+        {page < pageTitles.length - 1 ? (
+          <Pressable
+            disabled={!canContinue}
+            onPress={next}
+            style={[styles.button, !canContinue && styles.buttonDisabled]}>
+            <ThemedText style={styles.buttonText}>{text.common.continue}</ThemedText>
+          </Pressable>
+        ) : null}
       </View>
     </ThemedView>
   );
@@ -718,6 +738,143 @@ function RibbonPage({ isDark }: { isDark: boolean }) {
   );
 }
 
+function OnboardingAccountPage({
+  auth,
+  finishOnboarding,
+  isDark,
+}: {
+  auth: ReturnType<typeof useAuth>;
+  finishOnboarding: () => Promise<void>;
+  isDark: boolean;
+}) {
+  const accent = useAccentPalette();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function createAccount() {
+    const normalizedEmail = email.trim();
+
+    setError('');
+    setMessage('');
+
+    if (!normalizedEmail || password.length < 6) {
+      setError('Enter an email and a password with at least 6 characters.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await auth.signUp(normalizedEmail, password);
+
+      if (result.needsEmailConfirmation) {
+        setMessage('Check your email to confirm your account. Your Diabeto setup is saved.');
+      }
+
+      await finishOnboarding();
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Could not create your account.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    setError('');
+    setMessage('');
+    setIsSubmitting(true);
+
+    try {
+      await finishOnboarding();
+      await auth.signInWithGoogle();
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Could not start Google sign-in.');
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <View style={styles.page}>
+      <ThemedText type="title" style={styles.title}>
+        Create your account
+      </ThemedText>
+      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+        Save your setup now, or continue as guest and add an account later from Settings.
+      </ThemedText>
+
+      <View style={[styles.panel, isDark && styles.panelDark]}>
+        {!auth.isConfigured ? (
+          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+            Supabase is not configured for this build. You can continue as guest.
+          </ThemedText>
+        ) : (
+          <>
+            <View style={[styles.inputWrap, isDark && styles.inputWrapDark]}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                inputMode="email"
+                onChangeText={setEmail}
+                placeholder="Email"
+                placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
+                style={[styles.input, isDark && styles.inputDark]}
+                value={email}
+              />
+            </View>
+
+            <View style={[styles.inputWrap, isDark && styles.inputWrapDark]}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="new-password"
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
+                secureTextEntry
+                style={[styles.input, isDark && styles.inputDark]}
+                value={password}
+              />
+            </View>
+
+            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {message ? <ThemedText style={[styles.messageText, isDark && styles.messageTextDark]}>{message}</ThemedText> : null}
+
+            <Pressable
+              disabled={isSubmitting}
+              onPress={createAccount}
+              style={[styles.accountButton, { backgroundColor: accent.primary }, isSubmitting && styles.buttonDisabled]}>
+              {isSubmitting ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <ThemedText style={styles.buttonText}>Create account</ThemedText>
+              )}
+            </Pressable>
+
+            <Pressable
+              disabled={isSubmitting}
+              onPress={signInWithGoogle}
+              style={[styles.googleButton, isDark && styles.googleButtonDark, isSubmitting && styles.buttonDisabled]}>
+              <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
+                Sign in with Google
+              </ThemedText>
+            </Pressable>
+          </>
+        )}
+
+        <Pressable
+          disabled={isSubmitting}
+          onPress={finishOnboarding}
+          style={[styles.guestButton, isSubmitting && styles.buttonDisabled]}>
+          <ThemedText style={[styles.guestButtonText, { color: accent.primary }]}>Continue as guest</ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 function InfoCard({ isDark, items }: { isDark: boolean; items: string[] }) {
   return (
     <View style={[styles.panel, isDark && styles.panelDark]}>
@@ -895,6 +1052,9 @@ const styles = StyleSheet.create({
     paddingTop: 56,
   },
   pageTransition: {
+    flex: 1,
+  },
+  keyboardView: {
     flex: 1,
   },
   page: {
@@ -1251,6 +1411,61 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 17,
     fontWeight: '800',
+  },
+  accountButton: {
+    alignItems: 'center',
+    borderRadius: 8,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  errorText: {
+    color: '#cc2f45',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  googleButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  googleButtonDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  googleButtonText: {
+    color: BrandColors.lightInputText,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  googleButtonTextDark: {
+    color: BrandColors.darkInputText,
+  },
+  guestButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  guestButtonText: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  messageText: {
+    color: BrandColors.lightInputText,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  messageTextDark: {
+    color: BrandColors.darkInputText,
   },
   secondaryButton: {
     alignItems: 'center',

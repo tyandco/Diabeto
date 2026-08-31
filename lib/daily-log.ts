@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { syncDailyLogForCurrentUser } from '@/lib/user-data-sync';
+
 const DAILY_LOG_KEY_PREFIX = 'diabeto.daily-log.';
 
 export type DailyLogMood = 'steady' | 'tired' | 'stressed' | 'good';
@@ -40,6 +42,7 @@ export async function loadDailyLog(date = getTodayLogDate()) {
 
 export async function saveDailyLog(log: DailyLog, date = getTodayLogDate()) {
   await AsyncStorage.setItem(getDailyLogKey(date), JSON.stringify(log));
+  await syncDailyLogForCurrentUser(date, log);
 }
 
 export async function loadDailyLogs(limit = 14) {
