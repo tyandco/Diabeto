@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { DiabetesPrediction, DiabetesProfile } from '@/lib/diabetes-advisor';
+import { syncHealthContextForCurrentUser } from '@/lib/user-data-sync';
 
 const HEALTH_CONTEXT_KEY = 'diabeto.health-context.v1';
 
@@ -21,6 +22,7 @@ export function setHealthContext(context: HealthContext | null) {
 export async function saveHealthContext(context: HealthContext) {
   setHealthContext(context);
   await AsyncStorage.setItem(HEALTH_CONTEXT_KEY, JSON.stringify(context));
+  await syncHealthContextForCurrentUser(context);
 }
 
 export async function loadHealthContext() {
