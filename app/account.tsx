@@ -31,6 +31,7 @@ export default function AccountScreen() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const isSignedIn = Boolean(user);
 
   async function handleSubmit() {
@@ -67,15 +68,24 @@ export default function AccountScreen() {
 
   async function handleGoogleSignIn() {
     setError('');
-    setMessage('');
+    setMessage('Redirecting to Google...');
     setIsSubmitting(true);
+    setIsRedirecting(true);
 
     try {
       await signInWithGoogle();
+
+      if (Platform.OS === 'web') {
+        return;
+      }
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Google sign-in failed.');
+      setIsRedirecting(false);
     } finally {
-      setIsSubmitting(false);
+      if (Platform.OS !== 'web') {
+        setIsSubmitting(false);
+        setIsRedirecting(false);
+      }
     }
   }
 
@@ -124,9 +134,12 @@ export default function AccountScreen() {
                 Add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.local`, then restart Expo.
               </ThemedText>
             </View>
-          ) : isLoading ? (
+          ) : isLoading || isRedirecting ? (
             <View style={[styles.panel, styles.loadingPanel, isDark && styles.panelDark]}>
               <ActivityIndicator color={accent.primary} />
+              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+                {isRedirecting ? 'Waiting for Google sign-in...' : 'Loading your account...'}
+              </ThemedText>
             </View>
           ) : isSignedIn ? (
             <View style={[styles.panel, isDark && styles.panelDark]}>
@@ -221,9 +234,13 @@ export default function AccountScreen() {
                 disabled={isSubmitting}
                 onPress={handleGoogleSignIn}
                 style={[styles.googleButton, isDark && styles.googleButtonDark, isSubmitting && styles.disabledButton]}>
-                <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
-                  Sign in with Google
-                </ThemedText>
+                {isRedirecting ? (
+                  <ActivityIndicator color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText} />
+                ) : (
+                  <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
+                    Sign in with Google
+                  </ThemedText>
+                )}
               </Pressable>
             </View>
           )}
