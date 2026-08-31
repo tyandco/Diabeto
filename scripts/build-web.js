@@ -11,12 +11,22 @@ const supabaseKey =
   process.env.SUPABASE_ANON_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY;
 
+const siteUrl =
+  process.env.EXPO_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+
 if (supabaseUrl) {
   process.env.EXPO_PUBLIC_SUPABASE_URL = supabaseUrl;
 }
 
 if (supabaseKey) {
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = supabaseKey;
+}
+
+if (siteUrl) {
+  process.env.EXPO_PUBLIC_SITE_URL = siteUrl;
 }
 
 const result = spawnSync('npx', ['expo', 'export', '-p', 'web'], {

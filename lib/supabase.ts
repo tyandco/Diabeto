@@ -28,7 +28,7 @@ export const supabase = isSupabaseConfigured
         storage: getSupabaseStorage(),
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: Platform.OS === 'web',
       },
     })
   : null;
