@@ -43,6 +43,29 @@ For web:
 npx expo start --web
 ```
 
+Build the production web bundle:
+
+```bash
+npm run build:web
+```
+
+## Vercel Deployment
+
+This repo includes Vercel support for Expo Router server output:
+
+- `vercel.json` builds with `npm run build:web` and serves `dist/client`.
+- `api/index.ts` delegates requests to the exported Expo server bundle in `dist/server`.
+- `expo-server` provides the Vercel adapter used by the serverless function.
+
+In Vercel, import the repository and keep the project root set to this folder. Add the same non-secret model environment variables used locally:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash-lite
+EXPO_PUBLIC_GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+Ribbon still uses user-owned Gemini API keys entered in Settings; do not add personal Gemini API keys to Vercel unless you intentionally change the app to use a shared server key.
+
 ## Gemini API Key
 
 Ribbon does not use a shared API key from `.env`. Each user must add their own Gemini API key in the app:
