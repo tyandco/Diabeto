@@ -69,6 +69,19 @@ export async function loadDailyLogs(limit = 14) {
     .filter((entry): entry is DailyLogEntry => Boolean(entry));
 }
 
+export function calculateDailyLogStreak(entries: DailyLogEntry[], today = getTodayLogDate()) {
+  const loggedDates = new Set(entries.map((entry) => entry.date));
+  let streak = 0;
+  const cursor = new Date(`${today}T00:00:00`);
+
+  while (loggedDates.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+}
+
 export function formatDailyLogHistoryForAI(entries: DailyLogEntry[]) {
   if (entries.length === 0) {
     return null;

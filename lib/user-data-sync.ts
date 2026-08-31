@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 const HEALTH_CONTEXT_KEY = 'diabeto.health-context.v1';
 const DAILY_LOG_KEY_PREFIX = 'diabeto.daily-log.';
+const ONBOARDING_COMPLETE_KEY = 'diabeto.onboarding-complete.v1';
 
 export async function syncHealthContextForCurrentUser(context: HealthContext) {
   if (!supabase) {
@@ -84,4 +85,52 @@ export async function syncStoredUserDataForCurrentUser() {
       );
     })
   );
+}
+
+export async function restoreUserDataForCurrentUser() {
+  if (!supabase) {
+    return { hasHealthContext: false };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { hasHealthContext: false };
+  }
+
+  const { data: healthContext } = await supabase
+    .from('health_contexts')
+    .select('profile, prediction')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (healthContext?.profile && healthContext.prediction) {
+    await AsyncStorage.setItem(
+      HEALTH_CONTEXT_KEY,
+      JSON.stringify({
+        profile: healthContext.profile,
+        prediction: healthContext.prediction,
+      })
+    );
+    await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+  }
+
+  const { data: dailyLogs } = await supabase
+    .from('daily_logs')
+    .select('log_date, log')
+    .eq('user_id', user.id)
+    .order('log_date', { ascending: false })
+    .limit(90);
+
+  if (dailyLogs) {
+    await Promise.all(
+      dailyLogs.map((entry) =>
+        AsyncStorage.setItem(`${DAILY_LOG_KEY_PREFIX}${entry.log_date}`, JSON.stringify(entry.log))
+      )
+    );
+  }
+
+  return { hasHealthContext: Boolean(healthContext?.profile && healthContext.prediction) };
 }

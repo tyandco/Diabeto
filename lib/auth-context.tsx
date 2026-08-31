@@ -5,15 +5,16 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 import { Platform } from 'react-native';
 
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { syncStoredUserDataForCurrentUser } from '@/lib/user-data-sync';
+import { restoreUserDataForCurrentUser, syncStoredUserDataForCurrentUser } from '@/lib/user-data-sync';
 
 type AuthContextValue = {
   isConfigured: boolean;
   isLoading: boolean;
   session: Session | null;
+  restoreUserData: () => Promise<{ hasHealthContext: boolean }>;
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirectPath?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
 };
@@ -22,18 +23,26 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 WebBrowser.maybeCompleteAuthSession();
 
-function getAuthRedirectUrl() {
+async function reconcileCurrentUserData() {
+  const result = await restoreUserDataForCurrentUser();
+
+  if (!result.hasHealthContext) {
+    await syncStoredUserDataForCurrentUser();
+  }
+}
+
+function getAuthRedirectUrl(path = '/account') {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return `${window.location.origin}/account`;
+    return `${window.location.origin}${path}`;
   }
 
   const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
 
   if (siteUrl) {
-    return `${siteUrl.replace(/\/$/, '')}/account`;
+    return `${siteUrl.replace(/\/$/, '')}${path}`;
   }
 
-  return Linking.createURL('/account');
+  return Linking.createURL(path);
 }
 
 function getSessionFromUrl(url: string) {
@@ -64,7 +73,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       if (data.session) {
-        syncStoredUserDataForCurrentUser();
+        reconcileCurrentUserData();
       }
     });
 
@@ -75,7 +84,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsLoading(false);
 
       if (nextSession) {
-        syncStoredUserDataForCurrentUser();
+        reconcileCurrentUserData();
       }
     });
 
@@ -90,6 +99,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isConfigured: isSupabaseConfigured,
       isLoading,
       session,
+      restoreUserData: restoreUserDataForCurrentUser,
       user: session?.user ?? null,
       async signIn(email, password) {
         if (!supabase) {
@@ -102,12 +112,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           throw error;
         }
       },
-      async signInWithGoogle() {
+      async signInWithGoogle(redirectPath = '/account') {
         if (!supabase) {
           throw new Error('Supabase is not configured.');
         }
 
-        const redirectTo = getAuthRedirectUrl();
+        const redirectTo = getAuthRedirectUrl(redirectPath);
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {

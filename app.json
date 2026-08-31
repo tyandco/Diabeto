@@ -49,6 +49,13 @@
         }
       ],
       "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "color": "#1894f2",
+          "defaultChannel": "daily-log-reminders"
+        }
+      ],
       "expo-sqlite"
     ],
     "experiments": {
