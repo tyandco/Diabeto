@@ -95,7 +95,7 @@ export default function SettingsScreen() {
               <Pressable
                 onPress={() => router.push('/account')}
                 style={[styles.keyButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
-                <ThemedText style={styles.pasteButtonText}>Account</ThemedText>
+                <ThemedText style={styles.pasteButtonText}>Sign in</ThemedText>
               </Pressable>
             )}
           </View>

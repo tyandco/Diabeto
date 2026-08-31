@@ -24,7 +24,7 @@ type AuthMode = 'sign-in' | 'sign-up';
 export default function AccountScreen() {
   const accent = useAccentPalette();
   const isDark = useColorScheme() === 'dark';
-  const { isConfigured, isLoading, signIn, signUp, user } = useAuth();
+  const { isConfigured, isLoading, signIn, signInWithGoogle, signOut, signUp, user } = useAuth();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,6 +60,35 @@ export default function AccountScreen() {
       }
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Authentication failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError('');
+    setMessage('');
+    setIsSubmitting(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Google sign-in failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setError('');
+    setMessage('');
+    setIsSubmitting(true);
+
+    try {
+      await signOut();
+      setMessage('Signed out.');
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : 'Sign-out failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -105,6 +134,18 @@ export default function AccountScreen() {
               <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
                 {user?.email}
               </ThemedText>
+              {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+              {message ? <ThemedText style={[styles.messageText, isDark && styles.messageTextDark]}>{message}</ThemedText> : null}
+              <Pressable
+                disabled={isSubmitting}
+                onPress={handleSignOut}
+                style={[styles.primaryButton, { backgroundColor: accent.primary }, isSubmitting && styles.disabledButton]}>
+                {isSubmitting ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <ThemedText style={styles.primaryButtonText}>Sign out</ThemedText>
+                )}
+              </Pressable>
             </View>
           ) : (
             <View style={[styles.panel, isDark && styles.panelDark]}>
@@ -174,6 +215,15 @@ export default function AccountScreen() {
                     {mode === 'sign-in' ? 'Sign in' : 'Create account'}
                   </ThemedText>
                 )}
+              </Pressable>
+
+              <Pressable
+                disabled={isSubmitting}
+                onPress={handleGoogleSignIn}
+                style={[styles.googleButton, isDark && styles.googleButtonDark, isSubmitting && styles.disabledButton]}>
+                <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
+                  Sign in with Google
+                </ThemedText>
               </Pressable>
             </View>
           )}
@@ -307,6 +357,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 46,
     paddingHorizontal: 16,
+  },
+  googleButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightBackground,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: 16,
+  },
+  googleButtonDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  googleButtonText: {
+    color: BrandColors.lightInputText,
+    fontWeight: '900',
+  },
+  googleButtonTextDark: {
+    color: BrandColors.darkInputText,
   },
   disabledButton: {
     opacity: 0.7,
