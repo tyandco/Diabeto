@@ -36,6 +36,10 @@ function getAuthRedirectUrl(path = '/account') {
     return `${window.location.origin}${path}`;
   }
 
+  if (Platform.OS !== 'web') {
+    return `diabeto://${path.replace(/^\//, '')}`;
+  }
+
   const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
 
   if (siteUrl) {
