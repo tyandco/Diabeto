@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -8,6 +8,7 @@ import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import {
+  calculateDailyLogStreak,
   getTodayLogDate,
   initialDailyLog,
   loadDailyLog,
@@ -17,6 +18,7 @@ import {
   type DailyLogEntry,
   type DailyLogMood,
 } from '@/lib/daily-log';
+import { getDailyLogReminderEnabled, setDailyLogReminderEnabled } from '@/lib/log-reminders';
 import { useI18n } from '@/lib/localization';
 
 export default function DailyLogScreen() {
@@ -26,6 +28,10 @@ export default function DailyLogScreen() {
   const [entries, setEntries] = useState<DailyLogEntry[]>([]);
   const [draft, setDraft] = useState<DailyLog>(initialDailyLog);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isReminderEnabled, setIsReminderEnabled] = useState(false);
+  const [isReminderSaving, setIsReminderSaving] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const streak = calculateDailyLogStreak(entries);
 
   const refreshLogs = useCallback(() => {
     loadDailyLogs(30)
@@ -36,6 +42,12 @@ export default function DailyLogScreen() {
   useEffect(() => {
     refreshLogs();
   }, [refreshLogs]);
+
+  useEffect(() => {
+    getDailyLogReminderEnabled()
+      .then(setIsReminderEnabled)
+      .catch(() => undefined);
+  }, []);
 
   const openEditor = async () => {
     const todayLog = await loadDailyLog();
@@ -53,6 +65,19 @@ export default function DailyLogScreen() {
     refreshLogs();
   };
 
+  const toggleReminder = async () => {
+    setIsReminderSaving(true);
+    setReminderMessage('');
+
+    try {
+      const result = await setDailyLogReminderEnabled(!isReminderEnabled);
+      setIsReminderEnabled(result.enabled);
+      setReminderMessage(result.reason ?? (result.enabled ? 'Daily reminder set for 8:00 PM.' : 'Daily reminder off.'));
+    } finally {
+      setIsReminderSaving(false);
+    }
+  };
+
   return (
     <ThemedView style={styles.screen}>
       <View style={styles.header}>
@@ -63,6 +88,37 @@ export default function DailyLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
+        <View style={[styles.summaryPanel, isDark && styles.panelDark]}>
+          <View style={styles.summaryCopy}>
+            <ThemedText type="subtitle">{streak} day streak</ThemedText>
+            <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+              {streak > 0 ? 'Keep logging daily to build momentum.' : 'Log today to start a streak.'}
+            </ThemedText>
+          </View>
+          <Pressable
+            disabled={isReminderSaving}
+            onPress={toggleReminder}
+            style={[
+              styles.reminderButton,
+              { borderColor: accent.primary },
+              isReminderEnabled && { backgroundColor: accent.primary },
+              isReminderSaving && styles.disabledButton,
+            ]}>
+            {isReminderSaving ? (
+              <ActivityIndicator color={isReminderEnabled ? '#ffffff' : accent.primary} />
+            ) : (
+              <ThemedText style={[styles.reminderButtonText, { color: isReminderEnabled ? '#ffffff' : accent.primary }]}>
+                {isReminderEnabled ? 'Reminder on' : 'Remind me'}
+              </ThemedText>
+            )}
+          </Pressable>
+          {reminderMessage ? (
+            <ThemedText style={[styles.reminderMessage, isDark && styles.mutedDark]}>
+              {reminderMessage}
+            </ThemedText>
+          ) : null}
+        </View>
+
         {entries.length === 0 ? (
           <View style={[styles.emptyPanel, isDark && styles.panelDark]}>
             <ThemedText type="subtitle">{text.log.noLogs}</ThemedText>
@@ -316,6 +372,41 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: Layout.tabBarContentInset + 86,
     paddingTop: 6,
+  },
+  summaryPanel: {
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    padding: 16,
+  },
+  summaryCopy: {
+    flex: 1,
+    gap: 6,
+    minWidth: 180,
+  },
+  reminderButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    minWidth: 120,
+    paddingHorizontal: 14,
+  },
+  reminderButtonText: {
+    fontWeight: '900',
+  },
+  reminderMessage: {
+    color: BrandColors.lightMutedText,
+    flexBasis: '100%',
+    fontSize: 13,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   emptyPanel: {
     backgroundColor: BrandColors.lightSurface,

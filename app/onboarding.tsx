@@ -85,7 +85,7 @@ export default function OnboardingScreen() {
   const pageTranslateX = useRef(new Animated.Value(0)).current;
 
   const profile = useMemo(() => parseProfile(form), [form]);
-  const pageTitles = useMemo(() => [...text.onboarding.pageTitles, 'Account'], [text.onboarding.pageTitles]);
+  const pageTitles = useMemo(() => ['Account', ...text.onboarding.pageTitles], [text.onboarding.pageTitles]);
   const canContinue = getCanContinue(page, acceptedTerms, acceptedPrivacy, form, profile);
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
@@ -147,6 +147,12 @@ export default function OnboardingScreen() {
     setPage((current) => Math.max(0, current - 1));
   };
 
+  const continueToSetup = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setDirection(1);
+    setPage(1);
+  };
+
   return (
     <ThemedView style={styles.screen}>
       <KeyboardAvoidingView
@@ -162,8 +168,11 @@ export default function OnboardingScreen() {
                 transform: [{ translateX: pageTranslateX }],
               },
             ]}>
-            {page === 0 ? <WelcomePage isDark={isDark} /> : null}
-            {page === 1 ? (
+            {page === 0 ? (
+              <OnboardingAccountPage auth={auth} isDark={isDark} onNeedsSetup={continueToSetup} />
+            ) : null}
+            {page === 1 ? <WelcomePage isDark={isDark} /> : null}
+            {page === 2 ? (
               <TermsPage
                 acceptedPrivacy={acceptedPrivacy}
                 acceptedTerms={acceptedTerms}
@@ -172,16 +181,9 @@ export default function OnboardingScreen() {
                 setAcceptedTerms={setAcceptedTerms}
               />
             ) : null}
-            {page === 2 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
-            {page === 3 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
-            {page === 4 ? <RibbonPage isDark={isDark} /> : null}
-            {page === 5 ? (
-              <OnboardingAccountPage
-                auth={auth}
-                finishOnboarding={finishOnboarding}
-                isDark={isDark}
-              />
-            ) : null}
+            {page === 3 ? <HealthPage form={form} isDark={isDark} update={update} /> : null}
+            {page === 4 ? <GlucosePage form={form} isDark={isDark} update={update} /> : null}
+            {page === 5 ? <RibbonPage isDark={isDark} /> : null}
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -212,17 +214,19 @@ export default function OnboardingScreen() {
           isDark && styles.footerDark,
           { paddingBottom: Math.max(insets.bottom, 14) },
         ]}>
-        {page > 0 ? (
+        {page > 1 ? (
           <Pressable onPress={back} style={styles.secondaryButton}>
             <ThemedText style={styles.secondaryButtonText}>{text.common.back}</ThemedText>
           </Pressable>
         ) : null}
-        {page < pageTitles.length - 1 ? (
+        {page > 0 ? (
           <Pressable
             disabled={!canContinue}
             onPress={next}
             style={[styles.button, !canContinue && styles.buttonDisabled]}>
-            <ThemedText style={styles.buttonText}>{text.common.continue}</ThemedText>
+            <ThemedText style={styles.buttonText}>
+              {page === pageTitles.length - 1 ? text.onboarding.startDiabeto : text.common.continue}
+            </ThemedText>
           </Pressable>
         ) : null}
       </View>
@@ -740,21 +744,58 @@ function RibbonPage({ isDark }: { isDark: boolean }) {
 
 function OnboardingAccountPage({
   auth,
-  finishOnboarding,
   isDark,
+  onNeedsSetup,
 }: {
   auth: ReturnType<typeof useAuth>;
-  finishOnboarding: () => Promise<void>;
   isDark: boolean;
+  onNeedsSetup: () => void;
 }) {
   const accent = useAccentPalette();
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const handledSignedInUser = useRef(false);
 
-  async function createAccount() {
+  useEffect(() => {
+    if (!auth.user || auth.isLoading || handledSignedInUser.current) {
+      return;
+    }
+
+    handledSignedInUser.current = true;
+    setIsSubmitting(true);
+
+    auth
+      .restoreUserData()
+      .then((result) => {
+        if (result.hasHealthContext) {
+          router.replace('/(tabs)');
+          return;
+        }
+
+        onNeedsSetup();
+      })
+      .catch((restoreError) => {
+        setError(restoreError instanceof Error ? restoreError.message : 'Could not restore your account data.');
+      })
+      .finally(() => setIsSubmitting(false));
+  }, [auth, onNeedsSetup]);
+
+  async function continueAfterAuth() {
+    const result = await auth.restoreUserData();
+
+    if (result.hasHealthContext) {
+      router.replace('/(tabs)');
+      return;
+    }
+
+    onNeedsSetup();
+  }
+
+  async function handleEmailAuth() {
     const normalizedEmail = email.trim();
 
     setError('');
@@ -768,15 +809,20 @@ function OnboardingAccountPage({
     setIsSubmitting(true);
 
     try {
-      const result = await auth.signUp(normalizedEmail, password);
+      if (mode === 'sign-in') {
+        await auth.signIn(normalizedEmail, password);
+        await continueAfterAuth();
+      } else {
+        const result = await auth.signUp(normalizedEmail, password);
 
-      if (result.needsEmailConfirmation) {
-        setMessage('Check your email to confirm your account. Your Diabeto setup is saved.');
+        if (result.needsEmailConfirmation) {
+          setMessage('Check your email to confirm your account. You can continue setup as guest for now.');
+        }
+
+        onNeedsSetup();
       }
-
-      await finishOnboarding();
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Could not create your account.');
+      setError(authError instanceof Error ? authError.message : 'Authentication failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -788,8 +834,8 @@ function OnboardingAccountPage({
     setIsSubmitting(true);
 
     try {
-      await finishOnboarding();
-      await auth.signInWithGoogle();
+      await auth.signInWithGoogle('/onboarding');
+      await continueAfterAuth();
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Could not start Google sign-in.');
       setIsSubmitting(false);
@@ -799,10 +845,10 @@ function OnboardingAccountPage({
   return (
     <View style={styles.page}>
       <ThemedText type="title" style={styles.title}>
-        Create your account
+        Sign in to Diabeto
       </ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        Save your setup now, or continue as guest and add an account later from Settings.
+        Sign in to restore saved data, create an account, or continue as guest.
       </ThemedText>
 
       <View style={[styles.panel, isDark && styles.panelDark]}>
@@ -812,6 +858,32 @@ function OnboardingAccountPage({
           </ThemedText>
         ) : (
           <>
+            <View style={[styles.segmented, isDark && styles.segmentedDark]}>
+              {(['sign-in', 'sign-up'] as const).map((option) => {
+                const selected = mode === option;
+
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      setMode(option);
+                      setError('');
+                      setMessage('');
+                    }}
+                    style={[styles.segment, selected && styles.segmentActive]}>
+                    <ThemedText
+                      style={[
+                        styles.segmentText,
+                        isDark && styles.segmentTextDark,
+                        selected && styles.segmentTextActive,
+                      ]}>
+                      {option === 'sign-in' ? 'Sign in' : 'Create account'}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             <View style={[styles.inputWrap, isDark && styles.inputWrapDark]}>
               <TextInput
                 autoCapitalize="none"
@@ -844,12 +916,14 @@ function OnboardingAccountPage({
 
             <Pressable
               disabled={isSubmitting}
-              onPress={createAccount}
+              onPress={handleEmailAuth}
               style={[styles.accountButton, { backgroundColor: accent.primary }, isSubmitting && styles.buttonDisabled]}>
               {isSubmitting ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <ThemedText style={styles.buttonText}>Create account</ThemedText>
+                <ThemedText style={styles.buttonText}>
+                  {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+                </ThemedText>
               )}
             </Pressable>
 
@@ -866,7 +940,7 @@ function OnboardingAccountPage({
 
         <Pressable
           disabled={isSubmitting}
-          onPress={finishOnboarding}
+          onPress={onNeedsSetup}
           style={[styles.guestButton, isSubmitting && styles.buttonDisabled]}>
           <ThemedText style={[styles.guestButtonText, { color: accent.primary }]}>Continue as guest</ThemedText>
         </Pressable>
@@ -1024,15 +1098,15 @@ function getCanContinue(
   form: FormState,
   profile: DiabetesProfile | null
 ) {
-  if (page === 1) {
+  if (page === 2) {
     return acceptedTerms && acceptedPrivacy;
   }
 
-  if (page === 2) {
+  if (page === 3) {
     return Boolean(form.age && form.heightCm && form.weightKg);
   }
 
-  if (page === 3) {
+  if (page === 4) {
     return Boolean(form.canMeasureGlucose === false || (form.canMeasureGlucose === true && form.glucoseMgDl));
   }
 
