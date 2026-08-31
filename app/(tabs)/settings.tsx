@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -17,6 +18,7 @@ import {
   type AppLanguage,
   type RibbonTone,
 } from '@/lib/app-preferences';
+import { useAuth } from '@/lib/auth-context';
 import { languageLabels, useI18n } from '@/lib/localization';
 
 const languageOptions: { label: string; value: AppLanguage }[] = [
@@ -34,10 +36,12 @@ const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 
 export default function SettingsScreen() {
   const accent = useAccentPalette();
+  const auth = useAuth();
   const preferences = useAppPreferences();
   const isDark = useColorScheme() === 'dark';
   const { text } = useI18n();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const availableLanguageOptions = preferences.secretLanguageUnlocked
     ? [...languageOptions, secretLanguageOption]
     : languageOptions;
@@ -55,6 +59,46 @@ export default function SettingsScreen() {
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             {text.settings.subtitle}
           </ThemedText>
+        </View>
+
+        <View style={[styles.panel, isDark && styles.panelDark]}>
+          <ThemedText type="subtitle">Account</ThemedText>
+          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+            {auth.isConfigured
+              ? auth.user?.email ?? 'Sign in or create an account with Supabase.'
+              : 'Add Supabase environment variables to enable accounts.'}
+          </ThemedText>
+          <View style={styles.keyActions}>
+            {auth.user ? (
+              <Pressable
+                disabled={isSigningOut}
+                onPress={async () => {
+                  setIsSigningOut(true);
+                  try {
+                    await auth.signOut();
+                  } finally {
+                    setIsSigningOut(false);
+                  }
+                }}
+                style={[
+                  styles.keyButton,
+                  { backgroundColor: accent.primary, borderColor: accent.primary },
+                  isSigningOut && styles.disabledButton,
+                ]}>
+                {isSigningOut ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <ThemedText style={styles.pasteButtonText}>Sign out</ThemedText>
+                )}
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => router.push('/account')}
+                style={[styles.keyButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
+                <ThemedText style={styles.pasteButtonText}>Account</ThemedText>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View style={[styles.panel, isDark && styles.panelDark]}>
@@ -332,6 +376,9 @@ const styles = StyleSheet.create({
   },
   keyButtonText: {
     fontWeight: '900',
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   keyInput: {
     color: BrandColors.lightInputText,

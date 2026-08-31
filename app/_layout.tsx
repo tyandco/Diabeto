@@ -8,6 +8,7 @@ import { AppIntroSplash } from '@/components/app-intro-splash';
 import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
+import { AuthProvider } from '@/lib/auth-context';
 import { useI18n } from '@/lib/localization';
 
 export const unstable_settings = {
@@ -43,16 +44,19 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>
-      <View style={{ direction: isRtl ? 'rtl' : 'ltr', flex: 1 }}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: text.common.appName }} />
-        </Stack>
-        <AppIntroSplash isDark={colorScheme === 'dark'} />
-        <StatusBar style="auto" />
-      </View>
+      <AuthProvider>
+        <View style={{ direction: isRtl ? 'rtl' : 'ltr', flex: 1 }}>
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="account" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: text.common.appName }} />
+          </Stack>
+          <AppIntroSplash isDark={colorScheme === 'dark'} />
+          <StatusBar style="auto" />
+        </View>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
