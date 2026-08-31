@@ -758,6 +758,7 @@ function OnboardingAccountPage({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const handledSignedInUser = useRef(false);
 
   useEffect(() => {
@@ -767,6 +768,7 @@ function OnboardingAccountPage({
 
     handledSignedInUser.current = true;
     setIsSubmitting(true);
+    setMessage('Restoring your Diabeto data...');
 
     auth
       .restoreUserData()
@@ -781,7 +783,10 @@ function OnboardingAccountPage({
       .catch((restoreError) => {
         setError(restoreError instanceof Error ? restoreError.message : 'Could not restore your account data.');
       })
-      .finally(() => setIsSubmitting(false));
+      .finally(() => {
+        setIsSubmitting(false);
+        setIsRedirecting(false);
+      });
   }, [auth, onNeedsSetup]);
 
   async function continueAfterAuth() {
@@ -830,14 +835,21 @@ function OnboardingAccountPage({
 
   async function signInWithGoogle() {
     setError('');
-    setMessage('');
+    setMessage('Redirecting to Google...');
     setIsSubmitting(true);
+    setIsRedirecting(true);
 
     try {
       await auth.signInWithGoogle('/onboarding');
+
+      if (Platform.OS === 'web') {
+        return;
+      }
+
       await continueAfterAuth();
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Could not start Google sign-in.');
+      setIsRedirecting(false);
       setIsSubmitting(false);
     }
   }
@@ -856,6 +868,13 @@ function OnboardingAccountPage({
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             Supabase is not configured for this build. You can continue as guest.
           </ThemedText>
+        ) : auth.isLoading || isRedirecting ? (
+          <View style={styles.authLoading}>
+            <ActivityIndicator color={accent.primary} />
+            <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+              {isRedirecting ? 'Waiting for Google sign-in...' : 'Loading your account...'}
+            </ThemedText>
+          </View>
         ) : (
           <>
             <View style={[styles.segmented, isDark && styles.segmentedDark]}>
@@ -931,9 +950,13 @@ function OnboardingAccountPage({
               disabled={isSubmitting}
               onPress={signInWithGoogle}
               style={[styles.googleButton, isDark && styles.googleButtonDark, isSubmitting && styles.buttonDisabled]}>
-              <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
-                Sign in with Google
-              </ThemedText>
+              {isRedirecting ? (
+                <ActivityIndicator color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText} />
+              ) : (
+                <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
+                  Sign in with Google
+                </ThemedText>
+              )}
             </Pressable>
           </>
         )}
@@ -1493,6 +1516,12 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 18,
     paddingVertical: 13,
+  },
+  authLoading: {
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 150,
+    justifyContent: 'center',
   },
   errorText: {
     color: '#cc2f45',
