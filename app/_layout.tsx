@@ -1,8 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
@@ -12,6 +10,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { AuthProvider } from '@/lib/auth-context';
 import { useI18n } from '@/lib/localization';
+import { useNotificationObserver } from '@/lib/notification-observer';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -62,28 +61,4 @@ export default function RootLayout() {
       </AuthProvider>
     </ThemeProvider>
   );
-}
-
-function useNotificationObserver() {
-  useEffect(() => {
-    function redirect(notification: Notifications.Notification) {
-      const url = notification.request.content.data?.url;
-
-      if (typeof url === 'string') {
-        router.push(url);
-      }
-    }
-
-    const response = Notifications.getLastNotificationResponse();
-
-    if (response?.notification) {
-      redirect(response.notification);
-    }
-
-    const subscription = Notifications.addNotificationResponseReceivedListener((nextResponse) => {
-      redirect(nextResponse.notification);
-    });
-
-    return () => subscription.remove();
-  }, []);
 }
