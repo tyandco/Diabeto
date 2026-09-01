@@ -5,7 +5,6 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, TextInpu
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -61,7 +60,7 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.account}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             {auth.isConfigured
@@ -99,9 +98,9 @@ export default function SettingsScreen() {
               </Pressable>
             )}
           </View>
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.geminiApiKey}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             {text.settings.keyHelp}
@@ -135,9 +134,9 @@ export default function SettingsScreen() {
               <ThemedText style={styles.pasteButtonText}>{text.common.paste}</ThemedText>
             </Pressable>
           </View>
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.appearance}</ThemedText>
           <Segmented
             accent={accent.primary}
@@ -146,9 +145,9 @@ export default function SettingsScreen() {
             options={appearanceOptions}
             value={preferences.appearanceMode}
           />
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.language}</ThemedText>
           <Dropdown
             accent={accent.primary}
@@ -162,9 +161,9 @@ export default function SettingsScreen() {
             onToggle={() => setIsLanguageOpen((current) => !current)}
             value={preferences.language}
           />
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: isAdvancedOpen }}
@@ -213,7 +212,7 @@ export default function SettingsScreen() {
               </View>
             </View>
           ) : null}
-        </GlassView>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -342,14 +341,12 @@ const styles = StyleSheet.create({
     color: BrandColors.darkMutedText,
   },
   panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 24,
     borderWidth: 1,
     gap: 14,
     padding: 18,
-    boxShadow: '0 8px 16px rgba(24, 35, 31, 0.05)',
-    elevation: 2,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -387,7 +384,7 @@ const styles = StyleSheet.create({
     color: BrandColors.darkInputText,
   },
   keyInputWrap: {
-    backgroundColor: BrandColors.lightBackground,
+    backgroundColor: 'rgba(247, 244, 238, 0.72)',
     borderColor: BrandColors.lightBorder,
     borderRadius: 14,
     borderWidth: 1,
@@ -405,7 +402,7 @@ const styles = StyleSheet.create({
   },
   dropdownButton: {
     alignItems: 'center',
-    backgroundColor: BrandColors.lightBackground,
+    backgroundColor: 'rgba(247, 244, 238, 0.72)',
     borderColor: BrandColors.lightBorder,
     borderRadius: 14,
     borderWidth: 1,
@@ -419,7 +416,7 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.darkBorder,
   },
   dropdownMenu: {
-    backgroundColor: BrandColors.lightBackground,
+    backgroundColor: 'rgba(247, 244, 238, 0.94)',
     borderColor: BrandColors.lightBorder,
     borderRadius: 14,
     borderWidth: 1,
@@ -445,8 +442,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   segmented: {
-    backgroundColor: BrandColors.primarySoft,
-    borderRadius: 14,
+    backgroundColor: 'rgba(223, 247, 244, 0.72)',
+    borderRadius: 18,
     flexDirection: 'row',
     padding: 4,
   },
@@ -455,7 +452,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     alignItems: 'center',
-    borderRadius: 11,
+    borderRadius: 14,
     flex: 1,
     justifyContent: 'center',
     minHeight: 40,
@@ -483,8 +480,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   toneList: {
-    backgroundColor: BrandColors.primarySoft,
-    borderRadius: 14,
+    backgroundColor: 'rgba(223, 247, 244, 0.72)',
+    borderRadius: 18,
     gap: 4,
     padding: 4,
   },
@@ -492,7 +489,7 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.darkSurfaceStrong,
   },
   toneRow: {
-    borderRadius: 11,
+    borderRadius: 14,
     justifyContent: 'center',
     minHeight: 54,
     paddingHorizontal: 12,

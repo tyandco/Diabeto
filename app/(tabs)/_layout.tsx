@@ -39,7 +39,7 @@ export default function TabLayout() {
           borderColor: isDark ? 'rgba(184, 200, 194, 0.18)' : BrandColors.glassBorder,
           borderTopWidth: 0,
           borderWidth: StyleSheet.hairlineWidth,
-          borderRadius: 22,
+          borderRadius: 30,
           bottom: Layout.tabBarBottomOffset,
           height: Layout.tabBarHeight + insets.bottom,
           left: 14,
@@ -102,7 +102,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabItem: {
-    borderRadius: 16,
+    borderRadius: 22,
     paddingVertical: 2,
   },
   tabLabel: {
