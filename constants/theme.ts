@@ -47,9 +47,9 @@ export const Colors = {
 };
 
 export const Layout = {
-  tabBarHeight: 72,
+  tabBarHeight: 78,
   tabBarBottomOffset: 14,
-  tabBarContentInset: 168,
+  tabBarContentInset: 176,
 };
 
 export const Fonts = {

@@ -32,6 +32,7 @@ export default function TabLayout() {
         ),
         tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         tabBarHideOnKeyboard: true,
+        tabBarIconStyle: styles.tabIcon,
         tabBarItemStyle: styles.tabItem,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: {
@@ -43,8 +44,8 @@ export default function TabLayout() {
           bottom: Layout.tabBarBottomOffset,
           height: Layout.tabBarHeight + insets.bottom,
           left: 14,
-          paddingBottom: Math.max(insets.bottom + 8, 12),
-          paddingTop: 10,
+          paddingBottom: Math.max(insets.bottom + 14, 18),
+          paddingTop: 8,
           position: 'absolute',
           right: 14,
           boxShadow: isDark ? '0 8px 18px rgba(0, 0, 0, 0.28)' : '0 8px 18px rgba(24, 35, 31, 0.10)',
@@ -101,14 +102,21 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabIcon: {
+    marginBottom: 0,
+    marginTop: 0,
+  },
   tabItem: {
     borderRadius: 22,
+    height: 48,
+    justifyContent: 'center',
     paddingVertical: 0,
   },
   tabLabel: {
     fontFamily: Fonts.displaySemiBold,
     fontSize: 9,
     lineHeight: 11,
-    marginTop: 1,
+    marginTop: 0,
+    paddingBottom: 0,
   },
 });
