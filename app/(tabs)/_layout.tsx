@@ -25,7 +25,7 @@ export default function TabLayout() {
         tabBarBackground: () => (
           <BlurView
             experimentalBlurMethod="dimezisBlurView"
-            intensity={isDark ? 18 : 32}
+            intensity={isDark ? 12 : 20}
             style={StyleSheet.absoluteFill}
             tint={isDark ? 'dark' : 'light'}
           />
@@ -36,11 +36,11 @@ export default function TabLayout() {
         tabBarItemStyle: styles.tabItem,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: {
-          backgroundColor: isDark ? 'rgba(23, 34, 30, 0.52)' : 'rgba(255, 255, 255, 0.34)',
+          backgroundColor: isDark ? 'rgba(23, 34, 30, 0.76)' : 'rgba(255, 255, 255, 0.76)',
           borderColor: isDark ? 'rgba(184, 200, 194, 0.18)' : BrandColors.glassBorder,
           borderTopWidth: 0,
           borderWidth: StyleSheet.hairlineWidth,
-          borderRadius: 30,
+          borderRadius: 34,
           bottom: Layout.tabBarBottomOffset,
           height: Layout.tabBarHeight + insets.bottom,
           left: 14,
@@ -48,8 +48,6 @@ export default function TabLayout() {
           paddingTop: 8,
           position: 'absolute',
           right: 14,
-          boxShadow: isDark ? '0 8px 18px rgba(0, 0, 0, 0.28)' : '0 8px 18px rgba(24, 35, 31, 0.10)',
-          elevation: 12,
         },
         headerShown: false,
         tabBarButton: HapticTab,
@@ -113,10 +111,12 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   tabLabel: {
-    fontFamily: Fonts.displaySemiBold,
-    fontSize: 9,
-    lineHeight: 11,
+    fontFamily: Fonts.displayMedium,
+    fontSize: 8,
+    lineHeight: 10,
     marginTop: 0,
     paddingBottom: 0,
+    textShadowColor: 'transparent',
+    textShadowRadius: 0,
   },
 });

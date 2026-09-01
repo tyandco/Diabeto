@@ -9,7 +9,6 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -99,7 +98,7 @@ export default function PredictScreen() {
           </ThemedText>
         </View>
 
-        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+        <View style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.predict.yourDetails}</ThemedText>
 
           <View style={styles.grid}>
@@ -187,9 +186,9 @@ export default function PredictScreen() {
             </View>
             <ThemedText type="defaultSemiBold">{text.onboarding.familyHistory}</ThemedText>
           </Pressable>
-        </GlassView>
+        </View>
 
-        <GlassView style={[styles.resultPanel, isDark && styles.panelDark]}>
+        <View style={[styles.resultPanel, isDark && styles.panelDark]}>
           {profile && prediction ? (
             <>
               <View style={styles.resultTop}>
@@ -222,7 +221,7 @@ export default function PredictScreen() {
           ) : (
             <ThemedText>{text.predict.enterValid}</ThemedText>
           )}
-        </GlassView>
+        </View>
 
         <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
           {text.predict.disclaimer}
@@ -512,14 +511,12 @@ const styles = StyleSheet.create({
     color: BrandColors.lightMutedText,
   },
   panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 24,
     borderWidth: 1,
     gap: 16,
     padding: 18,
-    boxShadow: '0 10px 18px rgba(24, 35, 31, 0.06)',
-    elevation: 2,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -635,9 +632,9 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.primary,
   },
   resultPanel: {
-    backgroundColor: 'rgba(238, 247, 244, 0.62)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 24,
     borderWidth: 1,
     gap: 14,
     padding: 18,

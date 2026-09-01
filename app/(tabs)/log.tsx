@@ -4,7 +4,6 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput,
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { GlassView } from '@/components/glass-view';
 import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
@@ -120,7 +119,7 @@ export default function DailyLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
-        <GlassView style={[styles.summaryPanel, isDark && styles.panelDark]}>
+        <View style={[styles.summaryPanel, isDark && styles.panelDark]}>
           <View style={styles.summaryCopy}>
             <ThemedText type="subtitle">{text.log.streakTitle(streak)}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
@@ -172,15 +171,15 @@ export default function DailyLogScreen() {
               </Pressable>
             </View>
           </View>
-        </GlassView>
+        </View>
 
         {entries.length === 0 ? (
-          <GlassView style={[styles.emptyPanel, isDark && styles.panelDark]}>
+          <View style={[styles.emptyPanel, isDark && styles.panelDark]}>
             <ThemedText type="subtitle">{text.log.noLogs}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
               {text.log.emptyHelp}
             </ThemedText>
-          </GlassView>
+          </View>
         ) : (
           entries.map((entry) => <HistoryCard entry={entry} isDark={isDark} key={entry.date} />)
         )}
@@ -309,7 +308,7 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
   ];
 
   return (
-    <GlassView style={[styles.historyCard, isDark && styles.panelDark]}>
+    <View style={[styles.historyCard, isDark && styles.panelDark]}>
       <View style={styles.cardTop}>
         <ThemedText type="defaultSemiBold">{formatDate(entry.date, language)}</ThemedText>
         <ThemedText style={[styles.mood, isDark && styles.mutedDark]}>{text.log.moods[log.mood]}</ThemedText>
@@ -322,7 +321,7 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
         ))}
       </View>
       {log.notes ? <ThemedText style={styles.notesPreview}>{log.notes}</ThemedText> : null}
-    </GlassView>
+    </View>
   );
 }
 
@@ -449,16 +448,14 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   summaryPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 24,
     borderWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     padding: 18,
-    boxShadow: '0 10px 18px rgba(24, 35, 31, 0.06)',
-    elevation: 2,
   },
   summaryCopy: {
     flex: 1,
@@ -526,9 +523,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 24,
     borderWidth: 1,
     gap: 8,
     padding: 18,
@@ -538,14 +535,12 @@ const styles = StyleSheet.create({
     borderColor: BrandColors.darkBorder,
   },
   historyCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.58)',
-    borderColor: BrandColors.glassBorder,
-    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 10,
     padding: 14,
-    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.05)',
-    elevation: 1,
   },
   cardTop: {
     alignItems: 'center',
