@@ -49,7 +49,7 @@ export const Colors = {
 export const Layout = {
   tabBarHeight: 60,
   tabBarBottomOffset: 14,
-  tabBarContentInset: 110,
+  tabBarContentInset: 154,
 };
 
 export const Fonts = {

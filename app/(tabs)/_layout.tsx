@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Colors, Layout } from '@/constants/theme';
+import { BrandColors, Colors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { useI18n } from '@/lib/localization';
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tabLabel: {
+    fontFamily: Fonts.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     lineHeight: 14,
   },
 });

@@ -23,7 +23,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GlassView } from '@/components/glass-view';
 import { MarkdownText } from '@/components/markdown-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Fonts } from '@/constants/theme';
+import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
@@ -350,7 +350,7 @@ export default function ChatScreen() {
           {isSending ? <TypingBubble isDark={isDark} /> : null}
         </ScrollView>
 
-        <View style={[styles.chatBottom, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <View style={[styles.chatBottom, { paddingBottom: Layout.tabBarContentInset + insets.bottom - 74 }]}>
           <ScrollView
             contentContainerStyle={styles.quickPrompts}
             horizontal
@@ -648,7 +648,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.62)',
     borderColor: BrandColors.glassBorder,
     borderWidth: 1,
-    boxShadow: '0 6px 12px rgba(24, 35, 31, 0.05)',
   },
   botBubbleDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -712,8 +711,6 @@ const styles = StyleSheet.create({
     gap: 8,
     maxHeight: 230,
     padding: 10,
-    boxShadow: '0 10px 20px rgba(24, 35, 31, 0.08)',
-    elevation: 8,
   },
   composerDark: {
     backgroundColor: BrandColors.darkSurface,

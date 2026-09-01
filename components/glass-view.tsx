@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import type React from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -13,12 +13,17 @@ export function GlassView({
   style?: StyleProp<ViewStyle>;
 }) {
   const isDark = useColorScheme() === 'dark';
+  const glassStyle = [styles.base, isDark ? styles.dark : styles.light, style];
+
+  if (Platform.OS === 'android') {
+    return <View style={glassStyle}>{children}</View>;
+  }
 
   return (
     <BlurView
       experimentalBlurMethod="dimezisBlurView"
       intensity={isDark ? 16 : 24}
-      style={[styles.base, isDark ? styles.dark : styles.light, style]}
+      style={glassStyle}
       tint={isDark ? 'dark' : 'light'}>
       {children}
     </BlurView>

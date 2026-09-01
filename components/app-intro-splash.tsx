@@ -147,16 +147,14 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   title: {
-    fontFamily: Fonts?.display,
+    fontFamily: Fonts.displayBold,
     fontSize: 42,
-    fontWeight: '900',
     letterSpacing: 0,
     lineHeight: 50,
   },
   welcome: {
-    fontFamily: Fonts?.display,
+    fontFamily: Fonts.displaySemiBold,
     fontSize: 15,
-    fontWeight: '700',
     letterSpacing: 0,
     lineHeight: 20,
   },

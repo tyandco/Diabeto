@@ -1,7 +1,7 @@
 <#
 Auto-set JAVA_HOME for this project.
-- Tries to locate Microsoft OpenJDK 17 under `C:\Program Files\Microsoft\jdk-17*`.
-- Falls back to Android Studio JBR if found.
+- Tries Android Studio JBR first because this project's Gradle 8.14.3 build needs JDK 21.
+- Falls back to Microsoft OpenJDK 17 only if JBR is unavailable.
 - Attempts to set Machine environment variables (requires admin); on failure, sets User and the current session.
 - Usage: run from repo root: `powershell -ExecutionPolicy Bypass -File .\scripts\set-jdk.ps1` or pass Gradle tasks as args to forward to gradlew.
 #>
@@ -30,12 +30,12 @@ function Set-EnvMachineOrUser {
     }
 }
 
-# 1) Try Microsoft JDK 17
-$msJdk = Get-ChildItem 'C:\Program Files\Microsoft' -Filter 'jdk-17*' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($msJdk) { $jdkPath = $msJdk.FullName } else {
-    # 2) Try Android Studio bundled JBR
-    $jbrPath = 'C:\Program Files\Android\Android Studio\jbr'
-    if (Test-Path $jbrPath) { $jdkPath = $jbrPath }
+# 1) Try Android Studio bundled JBR
+$jbrPath = 'C:\Program Files\Android\Android Studio\jbr'
+if (Test-Path $jbrPath) { $jdkPath = $jbrPath } else {
+    # 2) Try Microsoft JDK 17
+    $msJdk = Get-ChildItem 'C:\Program Files\Microsoft' -Filter 'jdk-17*' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($msJdk) { $jdkPath = $msJdk.FullName }
 }
 
 if (-not $jdkPath) {

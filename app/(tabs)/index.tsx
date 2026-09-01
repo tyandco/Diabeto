@@ -1,6 +1,7 @@
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -23,9 +24,11 @@ export default function HomeScreen() {
   const preferences = useAppPreferences();
   const router = useRouter();
   const { text } = useI18n();
+  const insets = useSafeAreaInsets();
   const [, setIconTapCount] = useState(0);
   const tipIndex = useHomeTipIndex(text.home.tips.length);
   const activeTip = text.home.tips[tipIndex] ?? text.home.tips[0];
+  const scrollBottomInset = Layout.tabBarContentInset + insets.bottom;
 
   const handleIconPress = () => {
     if (preferences.secretLanguageUnlocked) {
@@ -47,7 +50,15 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom: scrollBottomInset,
+            paddingTop: Math.max(insets.top + 28, 56),
+          },
+        ]}
+        scrollIndicatorInsets={{ bottom: scrollBottomInset }}>
         <View style={styles.hero}>
           <View style={styles.heroCopy}>
             <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>{text.home.today}</ThemedText>
@@ -162,11 +173,15 @@ function HomeTile({
         <View style={[styles.tileIcon, isDark && styles.tileIconDark]}>
           <IconSymbol color={iconColor} name={icon} size={22} />
         </View>
-      <View style={styles.tileCopy}>
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
-        <ThemedText style={[styles.tileText, isDark && styles.mutedDark]}>{body}</ThemedText>
-      </View>
-      <IconSymbol color={isDark ? BrandColors.darkMutedText : BrandColors.lightMutedText} name="chevron.right" size={18} />
+        <View style={styles.tileCopy}>
+          <ThemedText type="defaultSemiBold">{title}</ThemedText>
+          <ThemedText style={[styles.tileText, isDark && styles.mutedDark]}>{body}</ThemedText>
+        </View>
+        <IconSymbol
+          color={isDark ? BrandColors.darkMutedText : BrandColors.lightMutedText}
+          name="chevron.right"
+          size={18}
+        />
       </Pressable>
     </GlassView>
   );
@@ -188,8 +203,6 @@ const styles = StyleSheet.create({
   content: {
     gap: 16,
     padding: 20,
-    paddingBottom: Layout.tabBarContentInset,
-    paddingTop: 64,
   },
   hero: {
     alignItems: 'flex-start',
@@ -208,7 +221,6 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     borderRadius: 24,
-    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.12)',
   },
   subtitle: {
     color: BrandColors.lightMutedText,
@@ -224,8 +236,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     overflow: 'hidden',
-    boxShadow: '0 12px 22px rgba(24, 35, 31, 0.08)',
-    elevation: 4,
   },
   summaryBandDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -263,8 +273,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     padding: 16,
-    boxShadow: '0 10px 20px rgba(24, 35, 31, 0.07)',
-    elevation: 3,
   },
   tipIcon: {
     alignItems: 'center',
@@ -293,7 +301,6 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 44,
     paddingHorizontal: 18,
-    boxShadow: '0 8px 12px rgba(24, 35, 31, 0.12)',
   },
   primaryActionText: {
     color: '#ffffff',
@@ -311,8 +318,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     minHeight: 92,
-    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.06)',
-    elevation: 2,
   },
   tileDark: {
     backgroundColor: BrandColors.darkSurface,
