@@ -79,11 +79,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bold: {
-    fontFamily: Fonts?.display,
     fontWeight: '900',
   },
   italic: {
-    fontFamily: Fonts?.display,
     fontStyle: 'italic',
   },
   code: {

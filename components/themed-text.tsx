@@ -2,6 +2,7 @@ import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { Fonts } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useI18n } from '@/lib/localization';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -17,15 +18,28 @@ export function ThemedText({
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const { language } = useI18n();
+  const fontSet =
+    language === 'ar'
+      ? {
+          bold: Fonts.arabicBold,
+          regular: Fonts.arabic,
+          semiBold: Fonts.arabicSemiBold,
+        }
+      : {
+          bold: Fonts.displayBold,
+          regular: Fonts.display,
+          semiBold: Fonts.displaySemiBold,
+        };
 
   return (
     <Text
       style={[
         { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
+        type === 'default' ? [styles.default, { fontFamily: fontSet.regular }] : undefined,
+        type === 'title' ? [styles.title, { fontFamily: fontSet.bold }] : undefined,
+        type === 'defaultSemiBold' ? [styles.defaultSemiBold, { fontFamily: fontSet.semiBold }] : undefined,
+        type === 'subtitle' ? [styles.subtitle, { fontFamily: fontSet.bold }] : undefined,
         type === 'link' ? styles.link : undefined,
         style,
       ]}
@@ -36,29 +50,25 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontFamily: Fonts?.display,
     fontSize: 16,
     lineHeight: 24,
   },
   defaultSemiBold: {
-    fontFamily: Fonts?.display,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '600',
   },
   title: {
-    fontFamily: Fonts?.display,
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    fontSize: 34,
+    letterSpacing: 0,
+    lineHeight: 38,
   },
   subtitle: {
-    fontFamily: Fonts?.display,
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 21,
+    letterSpacing: 0,
+    lineHeight: 27,
   },
   link: {
-    fontFamily: Fonts?.display,
+    fontFamily: Fonts.displaySemiBold,
     lineHeight: 30,
     fontSize: 16,
     color: '#0a7ea4',

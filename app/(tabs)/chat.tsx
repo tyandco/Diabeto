@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
 import { MarkdownText } from '@/components/markdown-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Fonts } from '@/constants/theme';
@@ -314,7 +315,7 @@ export default function ChatScreen() {
         </View>
 
         {!preferences.geminiApiKey.trim() ? (
-          <View style={[styles.keyPanel, isDark && styles.keyPanelDark]}>
+          <GlassView style={[styles.keyPanel, isDark && styles.keyPanelDark]}>
             <ThemedText type="defaultSemiBold">{text.chat.keyPanelTitle}</ThemedText>
             <ThemedText style={[styles.keyPanelText, isDark && styles.mutedDark]}>
               {text.chat.keyPanelBody}
@@ -333,7 +334,7 @@ export default function ChatScreen() {
                 <ThemedText style={styles.keyPanelPrimaryText}>{text.chat.openSettings}</ThemedText>
               </Pressable>
             </View>
-          </View>
+          </GlassView>
         ) : null}
 
         <ScrollView
@@ -368,7 +369,7 @@ export default function ChatScreen() {
             ))}
           </ScrollView>
 
-          <View style={[styles.composer, isDark && styles.composerDark]}>
+          <GlassView style={[styles.composer, isDark && styles.composerDark]}>
             {attachedImage ? (
               <View style={styles.attachmentPreview}>
                 <Image source={{ uri: attachedImage.uri }} style={styles.previewImage} />
@@ -423,7 +424,7 @@ export default function ChatScreen() {
                 <ThemedText style={styles.sendText}>{isSending ? text.common.wait : text.common.send}</ThemedText>
               </Pressable>
             </View>
-          </View>
+          </GlassView>
         </View>
       </KeyboardAvoidingView>
     </ThemedView>
@@ -465,7 +466,7 @@ function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDa
           <Image source={ribbonImage} style={styles.avatarImage} />
         </View>
       ) : null}
-      <View
+      <GlassView
         style={[
           styles.bubble,
           isUser ? styles.userBubble : styles.botBubble,
@@ -478,7 +479,7 @@ function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDa
           style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}
           text={message.text}
         />
-      </View>
+      </GlassView>
     </Animated.View>
   );
 }
@@ -523,11 +524,11 @@ function TypingBubble({ isDark }: { isDark: boolean }) {
       <View style={styles.avatar}>
         <Image source={ribbonImage} style={styles.avatarImage} />
       </View>
-      <View style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
+      <GlassView style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
         <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
           {text.chat.typing}
         </ThemedText>
-      </View>
+      </GlassView>
     </View>
   );
 }
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -573,7 +574,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: BrandColors.primarySoft,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -614,7 +615,7 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.primarySoft,
     borderColor: BrandColors.primary,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
     height: 28,
     justifyContent: 'center',
     overflow: 'hidden',
@@ -626,7 +627,7 @@ const styles = StyleSheet.create({
     width: 34,
   },
   bubble: {
-    borderRadius: 8,
+    borderRadius: 18,
     maxWidth: '84%',
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -638,15 +639,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   messageImage: {
-    borderRadius: 6,
+    borderRadius: 12,
     height: 150,
     marginBottom: 8,
     width: 180,
   },
   botBubble: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
+    backgroundColor: 'rgba(255, 255, 255, 0.62)',
+    borderColor: BrandColors.glassBorder,
     borderWidth: 1,
+    boxShadow: '0 6px 12px rgba(24, 35, 31, 0.05)',
   },
   botBubbleDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -683,7 +685,7 @@ const styles = StyleSheet.create({
   quickPrompt: {
     backgroundColor: BrandColors.primarySoft,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     minHeight: 34,
     justifyContent: 'center',
@@ -701,15 +703,17 @@ const styles = StyleSheet.create({
   },
   composer: {
     alignItems: 'stretch',
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 22,
     borderWidth: 1,
     flexGrow: 0,
     flexShrink: 0,
     gap: 8,
     maxHeight: 230,
     padding: 10,
+    boxShadow: '0 10px 20px rgba(24, 35, 31, 0.08)',
+    elevation: 8,
   },
   composerDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -718,7 +722,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     color: BrandColors.lightInputText,
     fontFamily: Fonts?.display,
@@ -739,8 +743,8 @@ const styles = StyleSheet.create({
     color: BrandColors.darkInputText,
   },
   keyPanel: {
-    backgroundColor: BrandColors.primarySoft,
-    borderColor: BrandColors.lightBorder,
+    backgroundColor: 'rgba(223, 247, 244, 0.62)',
+    borderColor: BrandColors.glassBorder,
     borderRadius: 8,
     borderWidth: 1,
     gap: 10,
@@ -809,7 +813,7 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     borderColor: BrandColors.lightBorder,
-    borderRadius: 999,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -827,7 +831,7 @@ const styles = StyleSheet.create({
   attachButton: {
     alignItems: 'center',
     borderColor: BrandColors.primary,
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
@@ -842,7 +846,7 @@ const styles = StyleSheet.create({
   sendButton: {
     alignItems: 'center',
     backgroundColor: BrandColors.primary,
-    borderRadius: 999,
+    borderRadius: 14,
     flexDirection: 'row',
     gap: 6,
     minHeight: 42,

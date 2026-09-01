@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput,
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
 import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
@@ -18,7 +19,13 @@ import {
   type DailyLogEntry,
   type DailyLogMood,
 } from '@/lib/daily-log';
-import { getDailyLogReminderEnabled, setDailyLogReminderEnabled } from '@/lib/log-reminders';
+import {
+  getDailyLogReminderEnabled,
+  getDailyLogReminderTime,
+  setDailyLogReminderEnabled,
+  setDailyLogReminderTime,
+  type ReminderTime,
+} from '@/lib/log-reminders';
 import { useI18n } from '@/lib/localization';
 
 export default function DailyLogScreen() {
@@ -30,6 +37,7 @@ export default function DailyLogScreen() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const [isReminderSaving, setIsReminderSaving] = useState(false);
+  const [reminderTime, setReminderTime] = useState<ReminderTime>({ hour: 20, minute: 0 });
   const [reminderMessage, setReminderMessage] = useState('');
   const streak = calculateDailyLogStreak(entries);
 
@@ -44,8 +52,11 @@ export default function DailyLogScreen() {
   }, [refreshLogs]);
 
   useEffect(() => {
-    getDailyLogReminderEnabled()
-      .then(setIsReminderEnabled)
+    Promise.all([getDailyLogReminderEnabled(), getDailyLogReminderTime()])
+      .then(([enabled, time]) => {
+        setIsReminderEnabled(enabled);
+        setReminderTime(time);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -70,9 +81,30 @@ export default function DailyLogScreen() {
     setReminderMessage('');
 
     try {
-      const result = await setDailyLogReminderEnabled(!isReminderEnabled);
+      const result = await setDailyLogReminderEnabled(!isReminderEnabled, reminderTime);
       setIsReminderEnabled(result.enabled);
-      setReminderMessage(result.reason ?? (result.enabled ? 'Daily reminder set for 8:00 PM.' : 'Daily reminder off.'));
+      setReminderMessage(result.reason ?? (result.enabled ? text.log.reminderSet(formatReminderTime(reminderTime, language)) : text.log.reminderOff));
+    } finally {
+      setIsReminderSaving(false);
+    }
+  };
+
+  const adjustReminderTime = async (minutesDelta: number) => {
+    const nextTime = addMinutesToReminderTime(reminderTime, minutesDelta);
+
+    setReminderTime(nextTime);
+    setIsReminderSaving(true);
+    setReminderMessage('');
+
+    try {
+      const result = await setDailyLogReminderTime(nextTime);
+      setIsReminderEnabled(result.enabled);
+
+      if (result.reason) {
+        setReminderMessage(result.reason);
+      } else if (result.enabled) {
+        setReminderMessage(text.log.reminderSet(formatReminderTime(nextTime, language)));
+      }
     } finally {
       setIsReminderSaving(false);
     }
@@ -88,11 +120,11 @@ export default function DailyLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
-        <View style={[styles.summaryPanel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.summaryPanel, isDark && styles.panelDark]}>
           <View style={styles.summaryCopy}>
-            <ThemedText type="subtitle">{streak} day streak</ThemedText>
+            <ThemedText type="subtitle">{text.log.streakTitle(streak)}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-              {streak > 0 ? 'Keep logging daily to build momentum.' : 'Log today to start a streak.'}
+              {streak > 0 ? text.log.streakActive : text.log.streakEmpty}
             </ThemedText>
           </View>
           <Pressable
@@ -108,7 +140,7 @@ export default function DailyLogScreen() {
               <ActivityIndicator color={isReminderEnabled ? '#ffffff' : accent.primary} />
             ) : (
               <ThemedText style={[styles.reminderButtonText, { color: isReminderEnabled ? '#ffffff' : accent.primary }]}>
-                {isReminderEnabled ? 'Reminder on' : 'Remind me'}
+                {isReminderEnabled ? text.log.reminderOn : text.log.remindMe}
               </ThemedText>
             )}
           </Pressable>
@@ -117,15 +149,38 @@ export default function DailyLogScreen() {
               {reminderMessage}
             </ThemedText>
           ) : null}
-        </View>
+          <View style={[styles.timePicker, isDark && styles.timePickerDark]}>
+            <View style={styles.timeCopy}>
+              <ThemedText type="defaultSemiBold">{text.log.reminderTime}</ThemedText>
+              <ThemedText style={[styles.reminderMessage, isDark && styles.mutedDark]}>
+                {text.log.reminderTimeHelp}
+              </ThemedText>
+            </View>
+            <View style={styles.timeActions}>
+              <Pressable
+                disabled={isReminderSaving}
+                onPress={() => adjustReminderTime(-15)}
+                style={[styles.timeButton, isReminderSaving && styles.disabledButton]}>
+                <Feather color={accent.primary} name="minus" size={18} />
+              </Pressable>
+              <ThemedText style={styles.timeValue}>{formatReminderTime(reminderTime, language)}</ThemedText>
+              <Pressable
+                disabled={isReminderSaving}
+                onPress={() => adjustReminderTime(15)}
+                style={[styles.timeButton, isReminderSaving && styles.disabledButton]}>
+                <Feather color={accent.primary} name="plus" size={18} />
+              </Pressable>
+            </View>
+          </View>
+        </GlassView>
 
         {entries.length === 0 ? (
-          <View style={[styles.emptyPanel, isDark && styles.panelDark]}>
+          <GlassView style={[styles.emptyPanel, isDark && styles.panelDark]}>
             <ThemedText type="subtitle">{text.log.noLogs}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
               {text.log.emptyHelp}
             </ThemedText>
-          </View>
+          </GlassView>
         ) : (
           entries.map((entry) => <HistoryCard entry={entry} isDark={isDark} key={entry.date} />)
         )}
@@ -177,7 +232,7 @@ export default function DailyLogScreen() {
                   label={text.log.sleep}
                   onChangeText={(value) => update('sleepHours', value)}
                   placeholder="0"
-                  suffix={language === 'secret' ? 'purr' : 'hours'}
+                  suffix={text.log.hours}
                   value={draft.sleepHours}
                 />
               </View>
@@ -186,7 +241,7 @@ export default function DailyLogScreen() {
                 accent={accent.primary}
                 label={text.log.water}
                 onChange={(value) => update('waterCups', value)}
-                suffix={language === 'secret' ? 'mew' : 'cups'}
+                suffix={text.log.cups}
                 value={draft.waterCups}
               />
               <Counter
@@ -194,7 +249,7 @@ export default function DailyLogScreen() {
                 label={text.log.balancedMeals}
                 max={6}
                 onChange={(value) => update('balancedMeals', value)}
-                suffix={language === 'secret' ? 'meow' : 'meals'}
+                suffix={text.log.meals}
                 value={draft.balancedMeals}
               />
 
@@ -254,7 +309,7 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
   ];
 
   return (
-    <View style={[styles.historyCard, isDark && styles.panelDark]}>
+    <GlassView style={[styles.historyCard, isDark && styles.panelDark]}>
       <View style={styles.cardTop}>
         <ThemedText type="defaultSemiBold">{formatDate(entry.date, language)}</ThemedText>
         <ThemedText style={[styles.mood, isDark && styles.mutedDark]}>{text.log.moods[log.mood]}</ThemedText>
@@ -267,7 +322,7 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
         ))}
       </View>
       {log.notes ? <ThemedText style={styles.notesPreview}>{log.notes}</ThemedText> : null}
-    </View>
+    </GlassView>
   );
 }
 
@@ -329,10 +384,10 @@ function Counter({
       </View>
       <View style={styles.counterActions}>
         <Pressable onPress={() => onChange(Math.max(0, value - 1))} style={styles.counterButton}>
-          <ThemedText style={[styles.counterButtonText, { color: accent }]}>-</ThemedText>
+          <Feather color={accent} name="minus" size={18} />
         </Pressable>
         <Pressable onPress={() => onChange(Math.min(max, value + 1))} style={styles.counterButton}>
-          <ThemedText style={[styles.counterButtonText, { color: accent }]}>+</ThemedText>
+          <Feather color={accent} name="plus" size={18} />
         </Pressable>
       </View>
     </View>
@@ -348,6 +403,26 @@ function formatDate(date: string, language: 'en' | 'ar' | 'es' | 'secret') {
     day: 'numeric',
     month: 'short',
     weekday: 'short',
+  });
+}
+
+function addMinutesToReminderTime(time: ReminderTime, minutesDelta: number): ReminderTime {
+  const totalMinutes = (time.hour * 60 + time.minute + minutesDelta + 24 * 60) % (24 * 60);
+
+  return {
+    hour: Math.floor(totalMinutes / 60),
+    minute: totalMinutes % 60,
+  };
+}
+
+function formatReminderTime(time: ReminderTime, language: 'en' | 'ar' | 'es' | 'secret') {
+  if (language === 'secret') {
+    return `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`;
+  }
+
+  return new Date(2026, 0, 1, time.hour, time.minute).toLocaleTimeString(language, {
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -374,14 +449,16 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   summaryPanel: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    padding: 16,
+    padding: 18,
+    boxShadow: '0 10px 18px rgba(24, 35, 31, 0.06)',
+    elevation: 2,
   },
   summaryCopy: {
     flex: 1,
@@ -390,7 +467,7 @@ const styles = StyleSheet.create({
   },
   reminderButton: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: 42,
@@ -408,25 +485,67 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.7,
   },
+  timePicker: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.44)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexBasis: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+    padding: 12,
+  },
+  timePickerDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
+  },
+  timeCopy: {
+    flex: 1,
+    minWidth: 150,
+  },
+  timeActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  timeButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.primarySoft,
+    borderRadius: 12,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  timeValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    minWidth: 76,
+    textAlign: 'center',
+  },
   emptyPanel: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 8,
-    padding: 16,
+    padding: 18,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
   },
   historyCard: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 18,
     borderWidth: 1,
     gap: 10,
-    padding: 12,
+    padding: 14,
+    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.05)',
+    elevation: 1,
   },
   cardTop: {
     alignItems: 'center',
@@ -446,7 +565,7 @@ const styles = StyleSheet.create({
   },
   statPill: {
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 999,
+    borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
@@ -465,7 +584,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 18,
     bottom: Layout.tabBarContentInset + 10,
     flexDirection: 'row',
     gap: 8,
@@ -473,6 +592,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     position: 'absolute',
     right: 18,
+    boxShadow: '0 10px 16px rgba(24, 35, 31, 0.16)',
+    elevation: 8,
   },
   fabText: {
     color: '#ffffff',
@@ -484,8 +605,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   editor: {
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     maxHeight: '86%',
     paddingTop: 16,
   },
@@ -502,7 +623,7 @@ const styles = StyleSheet.create({
   closeButton: {
     alignItems: 'center',
     borderColor: BrandColors.lightBorder,
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     height: 38,
     justifyContent: 'center',
@@ -528,7 +649,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     minHeight: 44,
@@ -571,23 +692,18 @@ const styles = StyleSheet.create({
   counterButton: {
     alignItems: 'center',
     borderColor: BrandColors.lightBorder,
-    borderRadius: 999,
+    borderRadius: 12,
     borderWidth: 1,
     height: 36,
     justifyContent: 'center',
     width: 36,
-  },
-  counterButtonText: {
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 24,
   },
   optionGroup: {
     gap: 8,
   },
   segmented: {
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 14,
     flexDirection: 'row',
     padding: 4,
   },
@@ -596,7 +712,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 11,
     flex: 1,
     justifyContent: 'center',
     minHeight: 38,
@@ -617,7 +733,7 @@ const styles = StyleSheet.create({
   notesInput: {
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     color: BrandColors.lightInputText,
     fontFamily: Fonts?.display,
@@ -628,7 +744,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 16,
     minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: 16,

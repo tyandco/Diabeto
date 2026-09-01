@@ -2,10 +2,12 @@ import { useEffect, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme as useRNColorScheme } from 'react-native';
 
+import { BrandColors } from '@/constants/theme';
+
 const APP_PREFERENCES_KEY = 'diabeto.app-preferences.v1';
 
 export type AppearanceMode = 'system' | 'light' | 'dark';
-export type AccentTheme = 'sky' | 'mint' | 'violet' | 'coral';
+export type AccentTheme = 'sky';
 export type AppLanguage = 'system' | 'en' | 'ar' | 'es' | 'secret';
 export type RibbonTone = 'warm' | 'cold' | 'aggressive' | 'casual';
 
@@ -36,28 +38,10 @@ export const defaultPreferences: AppPreferences = {
 
 export const accentPalettes: Record<AccentTheme, AccentPalette> = {
   sky: {
-    name: 'Sky',
-    primary: '#1894f2',
-    primaryDark: '#0b67b3',
-    primarySoft: '#e8f4ff',
-  },
-  mint: {
-    name: 'Mint',
-    primary: '#14a87b',
-    primaryDark: '#087456',
-    primarySoft: '#e5f8f1',
-  },
-  violet: {
-    name: 'Violet',
-    primary: '#7c5cff',
-    primaryDark: '#4f35c5',
-    primarySoft: '#f0edff',
-  },
-  coral: {
-    name: 'Coral',
-    primary: '#e2604f',
-    primaryDark: '#a6382c',
-    primarySoft: '#fff0ed',
+    name: 'Diabeto',
+    primary: BrandColors.primary,
+    primaryDark: BrandColors.primaryDark,
+    primarySoft: BrandColors.primarySoft,
   },
 };
 
@@ -130,8 +114,7 @@ export function useEffectiveColorScheme() {
 }
 
 export function useAccentPalette() {
-  const preferences = useAppPreferences();
-  return accentPalettes[preferences.accentTheme];
+  return accentPalettes[defaultPreferences.accentTheme];
 }
 
 export function getAppIconSource() {
@@ -165,7 +148,7 @@ function subscribe(listener: () => void) {
 
 function sanitizePreferences(value: Partial<AppPreferences>) {
   return {
-    accentTheme: isAccentTheme(value.accentTheme) ? value.accentTheme : defaultPreferences.accentTheme,
+    accentTheme: defaultPreferences.accentTheme,
     appearanceMode: isAppearanceMode(value.appearanceMode)
       ? value.appearanceMode
       : defaultPreferences.appearanceMode,
@@ -178,10 +161,6 @@ function sanitizePreferences(value: Partial<AppPreferences>) {
 
 function isAppearanceMode(value: unknown): value is AppearanceMode {
   return value === 'system' || value === 'light' || value === 'dark';
-}
-
-function isAccentTheme(value: unknown): value is AccentTheme {
-  return value === 'sky' || value === 'mint' || value === 'violet' || value === 'coral';
 }
 
 function isAppLanguage(value: unknown): value is AppLanguage {

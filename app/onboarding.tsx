@@ -85,7 +85,10 @@ export default function OnboardingScreen() {
   const pageTranslateX = useRef(new Animated.Value(0)).current;
 
   const profile = useMemo(() => parseProfile(form), [form]);
-  const pageTitles = useMemo(() => ['Account', ...text.onboarding.pageTitles], [text.onboarding.pageTitles]);
+  const pageTitles = useMemo(
+    () => [text.account.title, ...text.onboarding.pageTitles],
+    [text.account.title, text.onboarding.pageTitles]
+  );
   const canContinue = getCanContinue(page, acceptedTerms, acceptedPrivacy, form, profile);
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
@@ -236,8 +239,8 @@ export default function OnboardingScreen() {
 
 function WelcomePage({ isDark }: { isDark: boolean }) {
   const accent = useAccentPalette();
-  const preferences = useAppPreferences();
   const { text } = useI18n();
+  const preferences = useAppPreferences();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const availableLanguageOptions = preferences.secretLanguageUnlocked
     ? [...languageOptions, secretLanguageOption]
@@ -752,6 +755,7 @@ function OnboardingAccountPage({
   onNeedsSetup: () => void;
 }) {
   const accent = useAccentPalette();
+  const { text } = useI18n();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -768,7 +772,7 @@ function OnboardingAccountPage({
 
     handledSignedInUser.current = true;
     setIsSubmitting(true);
-    setMessage('Restoring your Diabeto data...');
+    setMessage(text.account.restoringData);
 
     auth
       .restoreUserData()
@@ -781,13 +785,13 @@ function OnboardingAccountPage({
         onNeedsSetup();
       })
       .catch((restoreError) => {
-        setError(restoreError instanceof Error ? restoreError.message : 'Could not restore your account data.');
+        setError(restoreError instanceof Error ? restoreError.message : text.account.restoreFailed);
       })
       .finally(() => {
         setIsSubmitting(false);
         setIsRedirecting(false);
       });
-  }, [auth, onNeedsSetup]);
+  }, [auth, onNeedsSetup, text.account.restoreFailed, text.account.restoringData]);
 
   async function continueAfterAuth() {
     const result = await auth.restoreUserData();
@@ -807,7 +811,7 @@ function OnboardingAccountPage({
     setMessage('');
 
     if (!normalizedEmail || password.length < 6) {
-      setError('Enter an email and a password with at least 6 characters.');
+      setError(text.account.invalidCredentials);
       return;
     }
 
@@ -821,13 +825,13 @@ function OnboardingAccountPage({
         const result = await auth.signUp(normalizedEmail, password);
 
         if (result.needsEmailConfirmation) {
-          setMessage('Check your email to confirm your account. You can continue setup as guest for now.');
+          setMessage(text.account.confirmEmailGuest);
         }
 
         onNeedsSetup();
       }
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Authentication failed.');
+      setError(authError instanceof Error ? authError.message : text.account.authFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -835,7 +839,7 @@ function OnboardingAccountPage({
 
   async function signInWithGoogle() {
     setError('');
-    setMessage('Redirecting to Google...');
+    setMessage(text.account.redirectingGoogle);
     setIsSubmitting(true);
     setIsRedirecting(true);
 
@@ -848,7 +852,7 @@ function OnboardingAccountPage({
 
       await continueAfterAuth();
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Could not start Google sign-in.');
+      setError(authError instanceof Error ? authError.message : text.account.googleStartFailed);
       setIsRedirecting(false);
       setIsSubmitting(false);
     }
@@ -857,22 +861,22 @@ function OnboardingAccountPage({
   return (
     <View style={styles.page}>
       <ThemedText type="title" style={styles.title}>
-        Sign in to Diabeto
+        {text.account.onboardingTitle}
       </ThemedText>
       <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        Sign in to restore saved data, create an account, or continue as guest.
+        {text.account.onboardingSubtitle}
       </ThemedText>
 
       <View style={[styles.panel, isDark && styles.panelDark]}>
         {!auth.isConfigured ? (
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-            Supabase is not configured for this build. You can continue as guest.
+            {text.account.supabaseGuest}
           </ThemedText>
         ) : auth.isLoading || isRedirecting ? (
           <View style={styles.authLoading}>
             <ActivityIndicator color={accent.primary} />
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-              {isRedirecting ? 'Waiting for Google sign-in...' : 'Loading your account...'}
+              {isRedirecting ? text.account.waitingGoogle : text.account.loadingAccount}
             </ThemedText>
           </View>
         ) : (
@@ -896,7 +900,7 @@ function OnboardingAccountPage({
                         isDark && styles.segmentTextDark,
                         selected && styles.segmentTextActive,
                       ]}>
-                      {option === 'sign-in' ? 'Sign in' : 'Create account'}
+                      {option === 'sign-in' ? text.account.signIn : text.account.createAccount}
                     </ThemedText>
                   </Pressable>
                 );
@@ -910,7 +914,7 @@ function OnboardingAccountPage({
                 autoCorrect={false}
                 inputMode="email"
                 onChangeText={setEmail}
-                placeholder="Email"
+                placeholder={text.account.email}
                 placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
                 style={[styles.input, isDark && styles.inputDark]}
                 value={email}
@@ -922,7 +926,7 @@ function OnboardingAccountPage({
                 autoCapitalize="none"
                 autoComplete="new-password"
                 onChangeText={setPassword}
-                placeholder="Password"
+                placeholder={text.account.password}
                 placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
                 secureTextEntry
                 style={[styles.input, isDark && styles.inputDark]}
@@ -941,7 +945,7 @@ function OnboardingAccountPage({
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <ThemedText style={styles.buttonText}>
-                  {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+                  {mode === 'sign-in' ? text.account.signIn : text.account.createAccount}
                 </ThemedText>
               )}
             </Pressable>
@@ -954,7 +958,7 @@ function OnboardingAccountPage({
                 <ActivityIndicator color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText} />
               ) : (
                 <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
-                  Sign in with Google
+                  {text.account.signInWithGoogle}
                 </ThemedText>
               )}
             </Pressable>
@@ -965,7 +969,9 @@ function OnboardingAccountPage({
           disabled={isSubmitting}
           onPress={onNeedsSetup}
           style={[styles.guestButton, isSubmitting && styles.buttonDisabled]}>
-          <ThemedText style={[styles.guestButtonText, { color: accent.primary }]}>Continue as guest</ThemedText>
+          <ThemedText style={[styles.guestButtonText, { color: accent.primary }]}>
+            {text.account.continueAsGuest}
+          </ThemedText>
         </Pressable>
       </View>
     </View>
@@ -1274,10 +1280,7 @@ const styles = StyleSheet.create({
     height: 92,
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: BrandColors.primaryDark,
-    shadowOffset: { height: 14, width: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 22,
+    boxShadow: '0 14px 22px rgba(8, 102, 101, 0.22)',
     width: 92,
   },
   logoImage: {
@@ -1327,10 +1330,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
     padding: 16,
-    shadowColor: '#173532',
-    shadowOffset: { height: 10, width: 0 },
-    shadowOpacity: 0.05,
-    shadowRadius: 18,
+    boxShadow: '0 10px 18px rgba(23, 53, 50, 0.05)',
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -1414,10 +1414,7 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: BrandColors.primary,
-    shadowColor: BrandColors.primaryDark,
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
+    boxShadow: '0 4px 8px rgba(8, 102, 101, 0.16)',
   },
   segmentText: {
     color: BrandColors.lightInputText,
@@ -1496,10 +1493,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    shadowColor: BrandColors.primaryDark,
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
+    boxShadow: '0 8px 14px rgba(8, 102, 101, 0.18)',
   },
   buttonDisabled: {
     opacity: 0.45,

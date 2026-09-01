@@ -3,25 +3,25 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-import { Platform } from 'react-native';
-
 export const BrandColors = {
-  primary: '#1894f2',
-  primaryDark: '#0b67b3',
-  primarySoft: '#e8f4ff',
-  accent: '#f2a64b',
-  lightBackground: '#f6faff',
+  primary: '#0c8f8f',
+  primaryDark: '#086665',
+  primarySoft: '#dff7f4',
+  accent: '#e56f4f',
+  lightBackground: '#f7f4ee',
   lightSurface: '#ffffff',
-  lightSurfaceStrong: '#e8f4ff',
-  lightBorder: '#c8e5fb',
-  lightMutedText: '#51616f',
-  lightInputText: '#102a3f',
-  darkBackground: '#07131f',
-  darkSurface: '#0d2033',
-  darkSurfaceStrong: '#123659',
-  darkBorder: '#245f90',
-  darkMutedText: '#b6c8d6',
-  darkInputText: '#eaf6ff',
+  lightSurfaceStrong: '#eef7f4',
+  lightBorder: '#d9e3dd',
+  glassBorder: 'rgba(255, 255, 255, 0.68)',
+  lightMutedText: '#62706b',
+  lightInputText: '#172621',
+  darkBackground: '#101714',
+  darkSurface: '#17221e',
+  darkSurfaceStrong: '#20332d',
+  darkBorder: '#34534b',
+  darkMutedText: '#b8c8c2',
+  darkInputText: '#f2faf6',
+  shadow: '#18231f',
 };
 
 const tintColorLight = BrandColors.primary;
@@ -47,35 +47,20 @@ export const Colors = {
 };
 
 export const Layout = {
-  tabBarHeight: 58,
-  tabBarBottomOffset: 0,
-  tabBarContentInset: 28,
+  tabBarHeight: 60,
+  tabBarBottomOffset: 14,
+  tabBarContentInset: 110,
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    display: 'SF Pro Display',
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    display: 'Inter',
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    display: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const Fonts = {
+  arabic: 'NotoSansArabic_400Regular',
+  arabicMedium: 'NotoSansArabic_500Medium',
+  arabicSemiBold: 'NotoSansArabic_600SemiBold',
+  arabicBold: 'NotoSansArabic_700Bold',
+  display: 'Rubik_400Regular',
+  displayMedium: 'Rubik_500Medium',
+  displaySemiBold: 'Rubik_600SemiBold',
+  displayBold: 'Rubik_700Bold',
+  mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  sans: 'Rubik_400Regular',
+};
