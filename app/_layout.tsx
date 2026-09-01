@@ -1,6 +1,20 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  NotoSansArabic_400Regular,
+  NotoSansArabic_500Medium,
+  NotoSansArabic_600SemiBold,
+  NotoSansArabic_700Bold,
+} from '@expo-google-fonts/noto-sans-arabic';
+import {
+  Rubik_400Regular,
+  Rubik_500Medium,
+  Rubik_600SemiBold,
+  Rubik_700Bold,
+} from '@expo-google-fonts/rubik';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
@@ -9,6 +23,7 @@ import { BrandColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { AuthProvider } from '@/lib/auth-context';
+import { initializeHomeTipCycle } from '@/lib/home-tip';
 import { useI18n } from '@/lib/localization';
 import { useNotificationObserver } from '@/lib/notification-observer';
 
@@ -18,9 +33,24 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   useNotificationObserver();
+  const [fontsLoaded] = useFonts({
+    NotoSansArabic_400Regular,
+    NotoSansArabic_500Medium,
+    NotoSansArabic_600SemiBold,
+    NotoSansArabic_700Bold,
+    Rubik_400Regular,
+    Rubik_500Medium,
+    Rubik_600SemiBold,
+    Rubik_700Bold,
+  });
   const colorScheme = useColorScheme();
   const accent = useAccentPalette();
   const { isRtl, text } = useI18n();
+
+  useEffect(() => {
+    initializeHomeTipCycle(text.home.tips.length);
+  }, [text.home.tips.length]);
+
   const lightTheme = {
     ...DefaultTheme,
     colors: {
@@ -43,6 +73,10 @@ export default function RootLayout() {
       text: '#ECEDEE',
     },
   };
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>

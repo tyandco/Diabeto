@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useI18n } from '@/lib/localization';
@@ -23,7 +24,7 @@ export default function GuideScreen() {
         <Section title={text.guide.eatTitle} items={text.guide.mealIdeas} isDark={isDark} />
         <Section title={text.guide.doTitle} items={text.guide.habitIdeas} isDark={isDark} />
 
-        <View style={[styles.infoBox, isDark && styles.infoBoxDark]}>
+        <GlassView style={[styles.infoBox, isDark && styles.infoBoxDark]}>
           <ThemedText type="subtitle">{text.guide.modelTitle}</ThemedText>
           <ThemedText>
             {text.guide.modelBody}
@@ -31,7 +32,7 @@ export default function GuideScreen() {
           <ThemedText>
             {text.guide.modelFuture}
           </ThemedText>
-        </View>
+        </GlassView>
       </ScrollView>
     </ThemedView>
   );
@@ -39,7 +40,7 @@ export default function GuideScreen() {
 
 function Section({ title, items, isDark }: { title: string; items: string[]; isDark: boolean }) {
   return (
-    <View style={[styles.section, isDark && styles.sectionDark]}>
+    <GlassView style={[styles.section, isDark && styles.sectionDark]}>
       <ThemedText type="subtitle">{title}</ThemedText>
       {items.map((item) => (
         <View key={item} style={styles.row}>
@@ -47,7 +48,7 @@ function Section({ title, items, isDark }: { title: string; items: string[]; isD
           <ThemedText style={styles.rowText}>{item}</ThemedText>
         </View>
       ))}
-    </View>
+    </GlassView>
   );
 }
 
@@ -71,12 +72,14 @@ const styles = StyleSheet.create({
     color: BrandColors.darkMutedText,
   },
   section: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 12,
-    padding: 16,
+    padding: 18,
+    boxShadow: '0 8px 16px rgba(24, 35, 31, 0.05)',
+    elevation: 2,
   },
   sectionDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -97,12 +100,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoBox: {
-    backgroundColor: BrandColors.primarySoft,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(223, 247, 244, 0.62)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 10,
-    padding: 16,
+    padding: 18,
   },
   infoBoxDark: {
     backgroundColor: BrandColors.darkSurfaceStrong,

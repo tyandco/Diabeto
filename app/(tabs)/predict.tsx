@@ -9,6 +9,8 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
@@ -97,7 +99,7 @@ export default function PredictScreen() {
           </ThemedText>
         </View>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.predict.yourDetails}</ThemedText>
 
           <View style={styles.grid}>
@@ -181,13 +183,13 @@ export default function PredictScreen() {
               form.familyHistory && isDark && styles.checkboxRowActiveDark,
             ]}>
             <View style={[styles.checkbox, form.familyHistory && styles.checkboxActive]}>
-              {form.familyHistory ? <ThemedText style={styles.checkmark}>✓</ThemedText> : null}
+              {form.familyHistory ? <IconSymbol color="#ffffff" name="checkmark" size={16} /> : null}
             </View>
             <ThemedText type="defaultSemiBold">{text.onboarding.familyHistory}</ThemedText>
           </Pressable>
-        </View>
+        </GlassView>
 
-        <View style={[styles.resultPanel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.resultPanel, isDark && styles.panelDark]}>
           {profile && prediction ? (
             <>
               <View style={styles.resultTop}>
@@ -202,7 +204,7 @@ export default function PredictScreen() {
                 </View>
               </View>
 
-              <View style={styles.scoreTrack}>
+              <View style={[styles.scoreTrack, isDark && styles.scoreTrackDark]}>
                 <View style={[styles.scoreFill, { width: `${prediction.score}%` }]} />
               </View>
               <ThemedText>{translateSummary(prediction.riskLevel, prediction.score, language)}</ThemedText>
@@ -220,7 +222,7 @@ export default function PredictScreen() {
           ) : (
             <ThemedText>{text.predict.enterValid}</ThemedText>
           )}
-        </View>
+        </GlassView>
 
         <ThemedText style={[styles.disclaimer, isDark && styles.mutedDark]}>
           {text.predict.disclaimer}
@@ -510,12 +512,14 @@ const styles = StyleSheet.create({
     color: BrandColors.lightMutedText,
   },
   panel: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 16,
-    padding: 16,
+    padding: 18,
+    boxShadow: '0 10px 18px rgba(24, 35, 31, 0.06)',
+    elevation: 2,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -536,7 +540,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     minHeight: 48,
@@ -567,7 +571,7 @@ const styles = StyleSheet.create({
   },
   segmented: {
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 14,
     flexDirection: 'row',
     padding: 4,
   },
@@ -576,7 +580,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 11,
     flex: 1,
     minHeight: 40,
     justifyContent: 'center',
@@ -600,7 +604,7 @@ const styles = StyleSheet.create({
   checkboxRow: {
     alignItems: 'center',
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
@@ -620,7 +624,7 @@ const styles = StyleSheet.create({
   checkbox: {
     alignItems: 'center',
     borderColor: '#7caed3',
-    borderRadius: 5,
+    borderRadius: 7,
     borderWidth: 2,
     height: 22,
     justifyContent: 'center',
@@ -630,19 +634,13 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.primary,
     borderColor: BrandColors.primary,
   },
-  checkmark: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
   resultPanel: {
-    backgroundColor: BrandColors.lightBackground,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(238, 247, 244, 0.62)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 22,
     borderWidth: 1,
     gap: 14,
-    padding: 16,
+    padding: 18,
   },
   resultTop: {
     alignItems: 'center',
@@ -672,10 +670,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#d23b3b',
   },
   scoreTrack: {
-    backgroundColor: BrandColors.lightSurfaceStrong,
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
     borderRadius: 999,
     height: 10,
     overflow: 'hidden',
+  },
+  scoreTrackDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
   },
   scoreFill: {
     backgroundColor: BrandColors.primary,

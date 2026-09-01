@@ -5,15 +5,14 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, TextInpu
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
-  accentPalettes,
   updateAppPreferences,
   useAccentPalette,
   useAppPreferences,
-  type AccentTheme,
   type AppearanceMode,
   type AppLanguage,
   type RibbonTone,
@@ -40,6 +39,7 @@ export default function SettingsScreen() {
   const preferences = useAppPreferences();
   const isDark = useColorScheme() === 'dark';
   const { text } = useI18n();
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const availableLanguageOptions = preferences.secretLanguageUnlocked
@@ -61,12 +61,12 @@ export default function SettingsScreen() {
           </ThemedText>
         </View>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">Account</ThemedText>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+          <ThemedText type="subtitle">{text.settings.account}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             {auth.isConfigured
-              ? auth.user?.email ?? 'Sign in or create an account with Supabase.'
-              : 'Add Supabase environment variables to enable accounts.'}
+              ? auth.user?.email ?? text.settings.accountSignedOut
+              : text.settings.accountSetupNeeded}
           </ThemedText>
           <View style={styles.keyActions}>
             {auth.user ? (
@@ -88,20 +88,20 @@ export default function SettingsScreen() {
                 {isSigningOut ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <ThemedText style={styles.pasteButtonText}>Sign out</ThemedText>
+                  <ThemedText style={styles.pasteButtonText}>{text.account.signOut}</ThemedText>
                 )}
               </Pressable>
             ) : (
               <Pressable
                 onPress={() => router.push('/account')}
                 style={[styles.keyButton, { backgroundColor: accent.primary, borderColor: accent.primary }]}>
-                <ThemedText style={styles.pasteButtonText}>Sign in</ThemedText>
+                <ThemedText style={styles.pasteButtonText}>{text.account.signIn}</ThemedText>
               </Pressable>
             )}
           </View>
-        </View>
+        </GlassView>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.geminiApiKey}</ThemedText>
           <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
             {text.settings.keyHelp}
@@ -135,9 +135,9 @@ export default function SettingsScreen() {
               <ThemedText style={styles.pasteButtonText}>{text.common.paste}</ThemedText>
             </Pressable>
           </View>
-        </View>
+        </GlassView>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.appearance}</ThemedText>
           <Segmented
             accent={accent.primary}
@@ -146,9 +146,9 @@ export default function SettingsScreen() {
             options={appearanceOptions}
             value={preferences.appearanceMode}
           />
-        </View>
+        </GlassView>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <ThemedText type="subtitle">{text.settings.language}</ThemedText>
           <Dropdown
             accent={accent.primary}
@@ -162,64 +162,58 @@ export default function SettingsScreen() {
             onToggle={() => setIsLanguageOpen((current) => !current)}
             value={preferences.language}
           />
-        </View>
+        </GlassView>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">{text.settings.colorTheme}</ThemedText>
-          <View style={styles.swatchGrid}>
-            {(Object.keys(accentPalettes) as AccentTheme[]).map((theme) => {
-              const palette = accentPalettes[theme];
-              const selected = preferences.accentTheme === theme;
-              return (
-                <Pressable
-                  key={theme}
-                  onPress={() => updateAppPreferences({ accentTheme: theme })}
-                  style={[
-                    styles.swatchOption,
-                    isDark && styles.swatchOptionDark,
-                    selected && { borderColor: palette.primary },
-                  ]}>
-                  <View style={[styles.swatch, { backgroundColor: palette.primary }]} />
-                  <ThemedText style={styles.optionText}>{text.settings.colorThemeLabels[theme]}</ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        <GlassView style={[styles.panel, isDark && styles.panelDark]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isAdvancedOpen }}
+            onPress={() => setIsAdvancedOpen((current) => !current)}
+            style={styles.advancedHeader}>
+            <ThemedText type="subtitle">{text.settings.advanced}</ThemedText>
+            <IconSymbol
+              color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText}
+              name={isAdvancedOpen ? 'chevron.down' : 'chevron.right'}
+              size={22}
+            />
+          </Pressable>
 
-        <View style={[styles.panel, isDark && styles.panelDark]}>
-          <ThemedText type="subtitle">{text.settings.ribbonTone}</ThemedText>
-          <View style={[styles.toneList, isDark && styles.toneListDark]}>
-            {toneOptions.map((tone) => {
-              const selected = preferences.ribbonTone === tone;
-              return (
-                <Pressable
-                  key={tone}
-                  onPress={() => updateAppPreferences({ ribbonTone: tone })}
-                  style={[styles.toneRow, selected && { backgroundColor: accent.primary }]}>
-                  <View style={styles.toneCopy}>
-                    <ThemedText
-                      style={[
-                        styles.toneText,
-                        isDark && styles.toneTextDark,
-                        selected && styles.selectedToneText,
-                      ]}>
-                      {text.settings.ribbonToneLabels[tone]}
-                    </ThemedText>
-                    <ThemedText
-                      style={[
-                        styles.toneDescription,
-                        isDark && styles.toneDescriptionDark,
-                        selected && styles.selectedToneDescription,
-                      ]}>
-                      ({text.settings.ribbonToneDescriptions[tone]})
-                    </ThemedText>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+          {isAdvancedOpen ? (
+            <View style={styles.advancedContent}>
+              <ThemedText type="defaultSemiBold">{text.settings.ribbonTone}</ThemedText>
+              <View style={[styles.toneList, isDark && styles.toneListDark]}>
+                {toneOptions.map((tone) => {
+                  const selected = preferences.ribbonTone === tone;
+                  return (
+                    <Pressable
+                      key={tone}
+                      onPress={() => updateAppPreferences({ ribbonTone: tone })}
+                      style={[styles.toneRow, selected && { backgroundColor: accent.primary }]}>
+                      <View style={styles.toneCopy}>
+                        <ThemedText
+                          style={[
+                            styles.toneText,
+                            isDark && styles.toneTextDark,
+                            selected && styles.selectedToneText,
+                          ]}>
+                          {text.settings.ribbonToneLabels[tone]}
+                        </ThemedText>
+                        <ThemedText
+                          style={[
+                            styles.toneDescription,
+                            isDark && styles.toneDescriptionDark,
+                            selected && styles.selectedToneDescription,
+                          ]}>
+                          ({text.settings.ribbonToneDescriptions[tone]})
+                        </ThemedText>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+        </GlassView>
       </ScrollView>
     </ThemedView>
   );
@@ -348,12 +342,14 @@ const styles = StyleSheet.create({
     color: BrandColors.darkMutedText,
   },
   panel: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 14,
-    padding: 16,
+    padding: 18,
+    boxShadow: '0 8px 16px rgba(24, 35, 31, 0.05)',
+    elevation: 2,
   },
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -366,7 +362,7 @@ const styles = StyleSheet.create({
   },
   keyButton: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     flexGrow: 1,
     justifyContent: 'center',
@@ -393,7 +389,7 @@ const styles = StyleSheet.create({
   keyInputWrap: {
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
   },
   keyInputWrapDark: {
@@ -411,7 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -425,7 +421,7 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     backgroundColor: BrandColors.lightBackground,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -450,7 +446,7 @@ const styles = StyleSheet.create({
   },
   segmented: {
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 14,
     flexDirection: 'row',
     padding: 4,
   },
@@ -459,7 +455,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 11,
     flex: 1,
     justifyContent: 'center',
     minHeight: 40,
@@ -478,64 +474,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '900',
   },
-  swatchGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  swatchOption: {
+  advancedHeader: {
     alignItems: 'center',
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexBasis: '47%',
     flexDirection: 'row',
-    flexGrow: 1,
+    justifyContent: 'space-between',
+  },
+  advancedContent: {
     gap: 10,
-    minHeight: 50,
-    minWidth: 132,
-    padding: 10,
-  },
-  swatchOptionDark: {
-    borderColor: BrandColors.darkBorder,
-  },
-  swatch: {
-    borderRadius: 999,
-    height: 24,
-    width: 24,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  iconOption: {
-    alignItems: 'center',
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexBasis: '30%',
-    flexGrow: 1,
-    gap: 8,
-    minWidth: 94,
-    padding: 10,
-  },
-  iconOptionDark: {
-    borderColor: BrandColors.darkBorder,
-  },
-  iconPreview: {
-    borderRadius: 14,
-    height: 54,
-    width: 54,
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '800',
-    textAlign: 'center',
   },
   toneList: {
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 14,
     gap: 4,
     padding: 4,
   },
@@ -543,7 +492,7 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.darkSurfaceStrong,
   },
   toneRow: {
-    borderRadius: 6,
+    borderRadius: 11,
     justifyContent: 'center',
     minHeight: 54,
     paddingHorizontal: 12,

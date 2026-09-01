@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -13,6 +14,7 @@ import {
   useAccentPalette,
   useAppPreferences,
 } from '@/lib/app-preferences';
+import { useHomeTipIndex } from '@/lib/home-tip';
 import { useI18n } from '@/lib/localization';
 
 export default function HomeScreen() {
@@ -22,6 +24,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const { text } = useI18n();
   const [, setIconTapCount] = useState(0);
+  const tipIndex = useHomeTipIndex(text.home.tips.length);
+  const activeTip = text.home.tips[tipIndex] ?? text.home.tips[0];
 
   const handleIconPress = () => {
     if (preferences.secretLanguageUnlocked) {
@@ -45,32 +49,54 @@ export default function HomeScreen() {
     <ThemedView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Pressable accessibilityLabel="Diabeto app icon" onPress={handleIconPress}>
-            <Image source={getAppIconSource()} style={styles.heroIcon} />
-          </Pressable>
           <View style={styles.heroCopy}>
+            <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>{text.home.today}</ThemedText>
             <ThemedText type="title">Diabeto</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
               {text.home.subtitle}
             </ThemedText>
           </View>
-        </View>
-
-        <View style={[styles.summaryBand, isDark && styles.summaryBandDark]}>
-          <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>{text.home.today}</ThemedText>
-          <ThemedText type="subtitle">{text.home.quickRiskCheck}</ThemedText>
-          <ThemedText style={[styles.summaryText, isDark && styles.mutedDark]}>
-            {text.home.predictionHelps}
-          </ThemedText>
-          <Pressable
-            onPress={() => router.push('/(tabs)/predict')}
-            style={[styles.primaryAction, { backgroundColor: accent.primary }]}>
-            <IconSymbol color="#ffffff" name="stethoscope" size={18} />
-            <ThemedText style={styles.primaryActionText}>{text.home.openPredict}</ThemedText>
+          <Pressable accessibilityLabel="Diabeto app icon" onPress={handleIconPress} style={styles.iconButton}>
+            <Image source={getAppIconSource()} style={styles.heroIcon} />
           </Pressable>
         </View>
 
-        <View style={styles.quickGrid}>
+        <GlassView style={[styles.tipPanel, isDark && styles.summaryBandDark]}>
+          <View style={[styles.tipIcon, isDark && styles.tileIconDark]}>
+            <IconSymbol color={accent.primary} name="lightbulb.fill" size={22} />
+          </View>
+          <View style={styles.tipCopy}>
+            <ThemedText style={[styles.kicker, isDark && styles.kickerDark]}>{text.home.launchTip}</ThemedText>
+            <ThemedText style={styles.tipText}>{activeTip}</ThemedText>
+          </View>
+        </GlassView>
+
+        <GlassView style={[styles.summaryBand, isDark && styles.summaryBandDark]}>
+          <View style={styles.summaryAccent} />
+          <View style={styles.summaryContent}>
+            <ThemedText type="subtitle">{text.home.quickRiskCheck}</ThemedText>
+            <ThemedText style={[styles.summaryText, isDark && styles.mutedDark]}>
+              {text.home.predictionHelps}
+            </ThemedText>
+            <View style={styles.metricRow}>
+              <MetricChip label={text.home.metrics.riskLabel} value={text.home.metrics.riskValue} isDark={isDark} />
+              <MetricChip label={text.home.metrics.habitsLabel} value={text.home.metrics.habitsValue} isDark={isDark} />
+              <MetricChip label={text.home.metrics.coachLabel} value={text.home.metrics.coachValue} isDark={isDark} />
+            </View>
+            <Pressable
+              onPress={() => router.push('/(tabs)/predict')}
+              style={[styles.primaryAction, { backgroundColor: accent.primary }]}>
+              <IconSymbol color="#ffffff" name="stethoscope" size={18} />
+              <ThemedText style={styles.primaryActionText}>{text.home.openPredict}</ThemedText>
+            </Pressable>
+          </View>
+        </GlassView>
+
+        <View style={styles.menuHeader}>
+          <ThemedText type="subtitle">{text.home.menuTitle}</ThemedText>
+        </View>
+
+        <View style={styles.menuStack}>
           <HomeTile
             body={text.home.guideBody}
             icon="fork.knife"
@@ -131,13 +157,27 @@ function HomeTile({
   title: string;
 }) {
   return (
-    <Pressable accessibilityRole="link" onPress={onPress} style={[styles.tile, isDark && styles.tileDark]}>
-      <View style={[styles.tileIcon, isDark && styles.tileIconDark]}>
-        <IconSymbol color={iconColor} name={icon} size={22} />
+    <GlassView style={[styles.tile, isDark && styles.tileDark]}>
+      <Pressable accessibilityRole="link" onPress={onPress} style={styles.tilePressable}>
+        <View style={[styles.tileIcon, isDark && styles.tileIconDark]}>
+          <IconSymbol color={iconColor} name={icon} size={22} />
+        </View>
+      <View style={styles.tileCopy}>
+        <ThemedText type="defaultSemiBold">{title}</ThemedText>
+        <ThemedText style={[styles.tileText, isDark && styles.mutedDark]}>{body}</ThemedText>
       </View>
-      <ThemedText type="defaultSemiBold">{title}</ThemedText>
-      <ThemedText style={[styles.tileText, isDark && styles.mutedDark]}>{body}</ThemedText>
-    </Pressable>
+      <IconSymbol color={isDark ? BrandColors.darkMutedText : BrandColors.lightMutedText} name="chevron.right" size={18} />
+      </Pressable>
+    </GlassView>
+  );
+}
+
+function MetricChip({ isDark, label, value }: { isDark: boolean; label: string; value: string }) {
+  return (
+    <View style={[styles.metricChip, isDark && styles.metricChipDark]}>
+      <ThemedText style={[styles.metricLabel, isDark && styles.mutedDark]}>{label}</ThemedText>
+      <ThemedText style={styles.metricValue}>{value}</ThemedText>
+    </View>
   );
 }
 
@@ -146,15 +186,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 20,
+    gap: 16,
     padding: 20,
     paddingBottom: Layout.tabBarContentInset,
     paddingTop: 64,
   },
   hero: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 16,
+    gap: 14,
   },
   heroCopy: {
     flex: 1,
@@ -162,9 +202,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   heroIcon: {
+    borderRadius: 22,
+    height: 78,
+    width: 78,
+  },
+  iconButton: {
     borderRadius: 24,
-    height: 86,
-    width: 86,
+    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.12)',
   },
   subtitle: {
     color: BrandColors.lightMutedText,
@@ -175,14 +219,27 @@ const styles = StyleSheet.create({
   summaryBand: {
     backgroundColor: BrandColors.lightSurface,
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 24,
     borderWidth: 1,
+    flexDirection: 'row',
     gap: 10,
-    padding: 16,
+    overflow: 'hidden',
+    boxShadow: '0 12px 22px rgba(24, 35, 31, 0.08)',
+    elevation: 4,
   },
   summaryBandDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
+  },
+  summaryAccent: {
+    backgroundColor: BrandColors.accent,
+    width: 8,
+  },
+  summaryContent: {
+    flex: 1,
+    gap: 12,
+    padding: 18,
+    paddingLeft: 14,
   },
   kicker: {
     color: BrandColors.primaryDark,
@@ -197,45 +254,86 @@ const styles = StyleSheet.create({
   summaryText: {
     color: BrandColors.lightMutedText,
   },
+  tipPanel: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    boxShadow: '0 10px 20px rgba(24, 35, 31, 0.07)',
+    elevation: 3,
+  },
+  tipIcon: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.primarySoft,
+    borderRadius: 16,
+    height: 46,
+    justifyContent: 'center',
+    width: 46,
+  },
+  tipCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  tipText: {
+    fontSize: 17,
+    fontWeight: '700',
+    lineHeight: 24,
+  },
   primaryAction: {
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: BrandColors.primary,
-    borderRadius: 999,
+    borderRadius: 16,
     flexDirection: 'row',
     gap: 8,
     minHeight: 44,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
+    boxShadow: '0 8px 12px rgba(24, 35, 31, 0.12)',
   },
   primaryActionText: {
     color: '#ffffff',
     fontWeight: '800',
   },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  menuHeader: {
+    paddingTop: 4,
+  },
+  menuStack: {
+    gap: 10,
   },
   tile: {
-    backgroundColor: BrandColors.lightSurface,
-    borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
     borderWidth: 1,
-    flexBasis: '47%',
-    flexGrow: 1,
-    gap: 8,
-    minHeight: 158,
-    minWidth: 140,
-    padding: 14,
+    minHeight: 92,
+    boxShadow: '0 8px 14px rgba(24, 35, 31, 0.06)',
+    elevation: 2,
   },
   tileDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
   },
+  tilePressable: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+  },
+  tileCopy: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
   tileIcon: {
     alignItems: 'center',
     backgroundColor: BrandColors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 14,
     height: 42,
     justifyContent: 'center',
     width: 42,
@@ -246,6 +344,33 @@ const styles = StyleSheet.create({
   tileText: {
     color: BrandColors.lightMutedText,
     fontSize: 14,
+    lineHeight: 20,
+  },
+  metricRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  metricChip: {
+    backgroundColor: BrandColors.lightSurfaceStrong,
+    borderRadius: 14,
+    minWidth: 82,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  metricChipDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+  },
+  metricLabel: {
+    color: BrandColors.lightMutedText,
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    fontSize: 15,
+    fontWeight: '900',
     lineHeight: 20,
   },
   note: {

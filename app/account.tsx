@@ -18,12 +18,14 @@ import { BrandColors, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/localization';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
 export default function AccountScreen() {
   const accent = useAccentPalette();
   const isDark = useColorScheme() === 'dark';
+  const { text } = useI18n();
   const { isConfigured, isLoading, signIn, signInWithGoogle, signOut, signUp, user } = useAuth();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
@@ -41,7 +43,7 @@ export default function AccountScreen() {
     setMessage('');
 
     if (!normalizedEmail || password.length < 6) {
-      setError('Enter an email and a password with at least 6 characters.');
+      setError(text.account.invalidCredentials);
       return;
     }
 
@@ -55,12 +57,12 @@ export default function AccountScreen() {
         const result = await signUp(normalizedEmail, password);
         setMessage(
           result.needsEmailConfirmation
-            ? 'Check your email to confirm your account, then sign in.'
-            : 'Account created. You are signed in.'
+            ? text.account.confirmEmail
+            : text.account.accountCreated
         );
       }
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Authentication failed.');
+      setError(authError instanceof Error ? authError.message : text.account.authFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +70,7 @@ export default function AccountScreen() {
 
   async function handleGoogleSignIn() {
     setError('');
-    setMessage('Redirecting to Google...');
+    setMessage(text.account.redirectingGoogle);
     setIsSubmitting(true);
     setIsRedirecting(true);
 
@@ -79,7 +81,7 @@ export default function AccountScreen() {
         return;
       }
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Google sign-in failed.');
+      setError(authError instanceof Error ? authError.message : text.account.googleFailed);
       setIsRedirecting(false);
     } finally {
       if (Platform.OS !== 'web') {
@@ -96,9 +98,9 @@ export default function AccountScreen() {
 
     try {
       await signOut();
-      setMessage('Signed out.');
+      setMessage(text.account.signedOut);
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : 'Sign-out failed.');
+      setError(authError instanceof Error ? authError.message : text.account.signOutFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -112,7 +114,7 @@ export default function AccountScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.topBar}>
             <Pressable
-              accessibilityLabel="Go back"
+              accessibilityLabel={text.account.goBack}
               accessibilityRole="button"
               onPress={() => router.back()}
               style={[styles.iconButton, isDark && styles.iconButtonDark]}>
@@ -121,29 +123,29 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.header}>
-            <ThemedText type="title">Account</ThemedText>
+            <ThemedText type="title">{text.account.title}</ThemedText>
             <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-              Sign in to sync Diabeto data with your Supabase account.
+              {text.account.subtitle}
             </ThemedText>
           </View>
 
           {!isConfigured ? (
             <View style={[styles.panel, isDark && styles.panelDark]}>
-              <ThemedText type="subtitle">Supabase setup needed</ThemedText>
+              <ThemedText type="subtitle">{text.account.setupNeeded}</ThemedText>
               <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-                Add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to `.env.local`, then restart Expo.
+                {text.account.setupHelp}
               </ThemedText>
             </View>
           ) : isLoading || isRedirecting ? (
             <View style={[styles.panel, styles.loadingPanel, isDark && styles.panelDark]}>
               <ActivityIndicator color={accent.primary} />
               <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-                {isRedirecting ? 'Waiting for Google sign-in...' : 'Loading your account...'}
+                {isRedirecting ? text.account.waitingGoogle : text.account.loadingAccount}
               </ThemedText>
             </View>
           ) : isSignedIn ? (
             <View style={[styles.panel, isDark && styles.panelDark]}>
-              <ThemedText type="subtitle">Signed in</ThemedText>
+              <ThemedText type="subtitle">{text.account.signedIn}</ThemedText>
               <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
                 {user?.email}
               </ThemedText>
@@ -156,7 +158,7 @@ export default function AccountScreen() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <ThemedText style={styles.primaryButtonText}>Sign out</ThemedText>
+                  <ThemedText style={styles.primaryButtonText}>{text.account.signOut}</ThemedText>
                 )}
               </Pressable>
             </View>
@@ -180,7 +182,7 @@ export default function AccountScreen() {
                           isDark && styles.segmentTextDark,
                           selected && styles.segmentTextActive,
                         ]}>
-                        {option === 'sign-in' ? 'Sign in' : 'Create account'}
+                        {option === 'sign-in' ? text.account.signIn : text.account.createAccount}
                       </ThemedText>
                     </Pressable>
                   );
@@ -194,7 +196,7 @@ export default function AccountScreen() {
                   autoCorrect={false}
                   inputMode="email"
                   onChangeText={setEmail}
-                  placeholder="Email"
+                  placeholder={text.account.email}
                   placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
                   style={[styles.input, isDark && styles.inputDark]}
                   value={email}
@@ -206,7 +208,7 @@ export default function AccountScreen() {
                   autoCapitalize="none"
                   autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
                   onChangeText={setPassword}
-                  placeholder="Password"
+                  placeholder={text.account.password}
                   placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
                   secureTextEntry
                   style={[styles.input, isDark && styles.inputDark]}
@@ -225,7 +227,7 @@ export default function AccountScreen() {
                   <ActivityIndicator color="#ffffff" />
                 ) : (
                   <ThemedText style={styles.primaryButtonText}>
-                    {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+                    {mode === 'sign-in' ? text.account.signIn : text.account.createAccount}
                   </ThemedText>
                 )}
               </Pressable>
@@ -238,7 +240,7 @@ export default function AccountScreen() {
                   <ActivityIndicator color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText} />
                 ) : (
                   <ThemedText style={[styles.googleButtonText, isDark && styles.googleButtonTextDark]}>
-                    Sign in with Google
+                    {text.account.signInWithGoogle}
                   </ThemedText>
                 )}
               </Pressable>

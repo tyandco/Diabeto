@@ -18,6 +18,7 @@ const MAPPING = {
   'stethoscope': 'medical-services',
   calendar: 'calendar-today',
   'gearshape.fill': 'settings',
+  'lightbulb.fill': 'lightbulb',
   'paperplane.fill': 'send',
   paperclip: 'attach-file',
   'chart.bar.fill': 'bar-chart',
@@ -25,7 +26,9 @@ const MAPPING = {
   'message.fill': 'chat',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.down': 'keyboard-arrow-down',
+  'chevron.left': 'chevron-left',
   'chevron.right': 'chevron-right',
+  checkmark: 'check',
 } as IconMapping;
 
 /**
