@@ -43,8 +43,8 @@ export default function TabLayout() {
           bottom: Layout.tabBarBottomOffset,
           height: Layout.tabBarHeight + insets.bottom,
           left: 14,
-          paddingBottom: Math.max(insets.bottom, 6),
-          paddingTop: 6,
+          paddingBottom: Math.max(insets.bottom + 8, 12),
+          paddingTop: 10,
           position: 'absolute',
           right: 14,
           boxShadow: isDark ? '0 8px 18px rgba(0, 0, 0, 0.28)' : '0 8px 18px rgba(24, 35, 31, 0.10)',
@@ -57,14 +57,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: text.tabs.home,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="predict"
         options={{
           title: text.tabs.predict,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="chart.bar.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -72,28 +72,28 @@ export default function TabLayout() {
         options={{
           href: null,
           title: text.tabs.guide,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="fork.knife" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="fork.knife" color={color} />,
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
           title: text.tabs.log,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
           title: text.tabs.chat,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="message.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: text.tabs.settings,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="gearshape.fill" color={color} />,
         }}
       />
     </Tabs>
@@ -103,11 +103,12 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabItem: {
     borderRadius: 22,
-    paddingVertical: 2,
+    paddingVertical: 0,
   },
   tabLabel: {
-    fontFamily: Fonts.displayBold,
-    fontSize: 11,
-    lineHeight: 14,
+    fontFamily: Fonts.displaySemiBold,
+    fontSize: 9,
+    lineHeight: 11,
+    marginTop: 1,
   },
 });
