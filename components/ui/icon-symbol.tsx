@@ -29,6 +29,7 @@ const MAPPING = {
   'chevron.down': 'keyboard-arrow-down',
   'chevron.left': 'chevron-left',
   'chevron.right': 'chevron-right',
+  sparkles: 'auto-awesome',
   checkmark: 'check',
 } as IconMapping;
 

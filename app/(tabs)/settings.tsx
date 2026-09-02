@@ -164,8 +164,11 @@ export default function SettingsScreen() {
           />
         </GlassView>
 
-        <GlassView style={[styles.panel, styles.creditsPanel, isDark && styles.panelDark]}>
-          <View style={styles.creditsHeader}>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/credits')}
+          style={[styles.panel, styles.creditsLink, isDark && styles.panelDark]}>
+          <View style={styles.creditsLinkCopy}>
             <IconSymbol color={accent.primary} name="sparkles" size={22} />
             <View style={styles.creditsHeaderCopy}>
               <ThemedText type="subtitle">{text.settings.credits}</ThemedText>
@@ -174,15 +177,12 @@ export default function SettingsScreen() {
               </ThemedText>
             </View>
           </View>
-          <View style={styles.creditsList}>
-            {text.settings.creditsItems.map((item) => (
-              <View key={item} style={[styles.creditRow, isDark && styles.creditRowDark]}>
-                <View style={[styles.creditDot, { backgroundColor: accent.primary }]} />
-                <ThemedText style={[styles.creditText, isDark && styles.segmentTextDark]}>{item}</ThemedText>
-              </View>
-            ))}
-          </View>
-        </GlassView>
+          <IconSymbol
+            color={isDark ? BrandColors.darkInputText : BrandColors.lightInputText}
+            name="chevron.right"
+            size={22}
+          />
+        </Pressable>
 
         <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <Pressable
@@ -375,45 +375,22 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
   },
-  creditsPanel: {
-    gap: 16,
-  },
-  creditsHeader: {
+  creditsLink: {
     alignItems: 'center',
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  creditsLinkCopy: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
     gap: 12,
+    minWidth: 0,
   },
   creditsHeaderCopy: {
     flex: 1,
     gap: 3,
     minWidth: 0,
-  },
-  creditsList: {
-    gap: 8,
-  },
-  creditRow: {
-    alignItems: 'center',
-    backgroundColor: BrandColors.lightBackground,
-    borderRadius: 14,
-    flexDirection: 'row',
-    gap: 10,
-    minHeight: 42,
-    paddingHorizontal: 12,
-  },
-  creditRowDark: {
-    backgroundColor: BrandColors.darkBackground,
-  },
-  creditDot: {
-    borderRadius: 4,
-    height: 8,
-    width: 8,
-  },
-  creditText: {
-    color: BrandColors.lightInputText,
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 19,
   },
   keyActions: {
     flexDirection: 'row',
