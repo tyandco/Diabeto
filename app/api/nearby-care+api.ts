@@ -46,8 +46,26 @@ const CARE_FIELD_MASK = [
   'places.websiteUri',
 ].join(',');
 
+const CARE_DAILY_REQUEST_LIMIT = 40;
+const CARE_MIN_REQUEST_INTERVAL_MS = 30_000;
+const rateLimits = new Map<string, { count: number; resetAt: number; updatedAt: number }>();
+
 export async function POST(request: Request) {
   try {
+    const rateLimit = checkRateLimit(request);
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        { error: rateLimit.message },
+        {
+          headers: {
+            'Retry-After': String(Math.ceil(rateLimit.retryAfterMs / 1000)),
+          },
+          status: 429,
+        }
+      );
+    }
+
     const apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
 
     if (!apiKey) {
@@ -95,6 +113,66 @@ export async function POST(request: Request) {
       { error: error instanceof Error ? error.message : 'Could not find nearby care right now.' },
       { status: 500 }
     );
+  }
+}
+
+function checkRateLimit(request: Request) {
+  const now = Date.now();
+  const clientId = getClientId(request);
+  const existing = rateLimits.get(clientId);
+  const current =
+    existing && existing.resetAt > now
+      ? existing
+      : {
+          count: 0,
+          resetAt: now + 24 * 60 * 60 * 1000,
+          updatedAt: 0,
+        };
+  const cooldownRemaining = CARE_MIN_REQUEST_INTERVAL_MS - (now - current.updatedAt);
+
+  if (cooldownRemaining > 0) {
+    return {
+      allowed: false,
+      message: 'Please wait a few seconds before searching nearby care again.',
+      retryAfterMs: cooldownRemaining,
+    };
+  }
+
+  if (current.count >= CARE_DAILY_REQUEST_LIMIT) {
+    return {
+      allowed: false,
+      message: 'Nearby care search limit reached for today. Try again tomorrow.',
+      retryAfterMs: current.resetAt - now,
+    };
+  }
+
+  rateLimits.set(clientId, {
+    count: current.count + 1,
+    resetAt: current.resetAt,
+    updatedAt: now,
+  });
+
+  cleanupRateLimits(now);
+
+  return { allowed: true, message: '', retryAfterMs: 0 };
+}
+
+function getClientId(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const realIp = request.headers.get('x-real-ip')?.trim();
+
+  return forwardedFor || realIp || 'unknown-client';
+}
+
+function cleanupRateLimits(now: number) {
+  if (rateLimits.size < 1000) {
+    return;
+  }
+
+  for (const [key, value] of rateLimits) {
+    if (value.resetAt <= now) {
+      rateLimits.delete(key);
+    }
   }
 }
 
