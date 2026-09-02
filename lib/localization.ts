@@ -136,6 +136,9 @@ const en = {
     account: 'Account',
     accountSignedOut: 'Sign in or create an account with Supabase.',
     accountSetupNeeded: 'Add Supabase environment variables to enable accounts.',
+    credits: 'Credits',
+    creditsSubtitle: 'People and tools behind Diabeto.',
+    creditsItems: ['Design and development: Ty and Co', 'Built with Expo and React Native', 'Accounts powered by Supabase', 'Nearby care powered by Google Maps'],
     advanced: 'Advanced',
     ribbonTone: 'Ribbon Tone',
     ribbonToneLabels: {
@@ -407,6 +410,9 @@ const es: typeof en = {
     account: 'Cuenta',
     accountSignedOut: 'Inicia sesion o crea una cuenta con Supabase.',
     accountSetupNeeded: 'Anade las variables de entorno de Supabase para activar cuentas.',
+    credits: 'Creditos',
+    creditsSubtitle: 'Personas y herramientas detras de Diabeto.',
+    creditsItems: ['Diseno y desarrollo: Ty and Co', 'Creado con Expo y React Native', 'Cuentas con Supabase', 'Atencion cercana con Google Maps'],
     advanced: 'Avanzado',
     ribbonTone: 'Tono de Ribbon',
     ribbonToneLabels: {
@@ -661,6 +667,9 @@ const secret: typeof en = {
     account: 'mew prrr',
     accountSignedOut: 'mrrp meow prrr.',
     accountSetupNeeded: 'hiss prrr mew.',
+    credits: 'prrr mew',
+    creditsSubtitle: 'prrr Diabeto.',
+    creditsItems: ['Ty and Co', 'Expo mew React Native', 'Supabase prrr', 'Google Maps prrr'],
     advanced: 'hiss?',
     ribbonTone: 'mrrp purr',
     ribbonToneLabels: {
@@ -928,6 +937,9 @@ const ar: typeof en = {
     account: 'الحساب',
     accountSignedOut: 'سجل الدخول أو أنشئ حسابا باستخدام Supabase.',
     accountSetupNeeded: 'أضف متغيرات بيئة Supabase لتفعيل الحسابات.',
+    credits: 'الاعتمادات',
+    creditsSubtitle: 'الأشخاص والأدوات وراء Diabeto.',
+    creditsItems: ['التصميم والتطوير: Ty and Co', 'مبني باستخدام Expo و React Native', 'الحسابات مدعومة من Supabase', 'الرعاية القريبة مدعومة من Google Maps'],
     advanced: 'متقدم',
     ribbonTone: 'نبرة Ribbon',
     ribbonToneLabels: {

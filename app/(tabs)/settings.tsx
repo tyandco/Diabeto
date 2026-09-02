@@ -164,6 +164,26 @@ export default function SettingsScreen() {
           />
         </GlassView>
 
+        <GlassView style={[styles.panel, styles.creditsPanel, isDark && styles.panelDark]}>
+          <View style={styles.creditsHeader}>
+            <IconSymbol color={accent.primary} name="sparkles" size={22} />
+            <View style={styles.creditsHeaderCopy}>
+              <ThemedText type="subtitle">{text.settings.credits}</ThemedText>
+              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+                {text.settings.creditsSubtitle}
+              </ThemedText>
+            </View>
+          </View>
+          <View style={styles.creditsList}>
+            {text.settings.creditsItems.map((item) => (
+              <View key={item} style={[styles.creditRow, isDark && styles.creditRowDark]}>
+                <View style={[styles.creditDot, { backgroundColor: accent.primary }]} />
+                <ThemedText style={[styles.creditText, isDark && styles.segmentTextDark]}>{item}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </GlassView>
+
         <GlassView style={[styles.panel, isDark && styles.panelDark]}>
           <Pressable
             accessibilityRole="button"
@@ -354,6 +374,46 @@ const styles = StyleSheet.create({
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
+  },
+  creditsPanel: {
+    gap: 16,
+  },
+  creditsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  creditsHeaderCopy: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  creditsList: {
+    gap: 8,
+  },
+  creditRow: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.lightBackground,
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 42,
+    paddingHorizontal: 12,
+  },
+  creditRowDark: {
+    backgroundColor: BrandColors.darkBackground,
+  },
+  creditDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  creditText: {
+    color: BrandColors.lightInputText,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
   },
   keyActions: {
     flexDirection: 'row',
