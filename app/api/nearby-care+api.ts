@@ -23,6 +23,7 @@ type GooglePlace = {
     longitude?: number;
   };
   nationalPhoneNumber?: string;
+  primaryType?: string;
   rating?: number;
   regularOpeningHours?: {
     openNow?: boolean;
@@ -39,6 +40,7 @@ const CARE_FIELD_MASK = [
   'places.googleMapsUri',
   'places.location',
   'places.nationalPhoneNumber',
+  'places.primaryType',
   'places.rating',
   'places.regularOpeningHours.openNow',
   'places.types',
@@ -90,6 +92,7 @@ export async function POST(request: Request) {
       searchText(apiKey, latitude, longitude, radiusMeters),
     ]);
     const places = dedupePlaces([...hospitals, ...diabetesCare])
+      .filter(isRelevantCarePlace)
       .map((place) => ({
         address: place.formattedAddress ?? null,
         distanceMeters: getDistanceMeters(latitude, longitude, place.location?.latitude, place.location?.longitude),
@@ -180,6 +183,8 @@ async function searchNearby(apiKey: string, latitude: number, longitude: number,
   const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
     body: JSON.stringify({
       includedTypes: ['hospital'],
+      excludedTypes: ['dentist', 'dental_clinic', 'veterinary_care'],
+      excludedPrimaryTypes: ['dentist', 'dental_clinic', 'veterinary_care'],
       locationRestriction: {
         circle: {
           center: { latitude, longitude },
@@ -216,7 +221,7 @@ async function searchText(apiKey: string, latitude: number, longitude: number, r
         },
       },
       maxResultCount: 8,
-      textQuery: 'endocrinologist diabetes clinic urgent care',
+      textQuery: 'endocrinologist diabetes clinic diabetes doctor urgent care hospital',
     }),
     headers: {
       'Content-Type': 'application/json',
@@ -233,6 +238,19 @@ async function searchText(apiKey: string, latitude: number, longitude: number, r
   }
 
   return data.places ?? [];
+}
+
+function isRelevantCarePlace(place: GooglePlace) {
+  const searchableText = [place.displayName?.text, place.formattedAddress, place.primaryType, ...(place.types ?? [])]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (/\b(dental|dentist|orthodont|veterinary|vet clinic|animal hospital|beauty|spa|cosmetic)\b/.test(searchableText)) {
+    return false;
+  }
+
+  return /\b(hospital|doctor|clinic|medical|urgent|endocrinologist|diabetes|health|healthcare)\b/.test(searchableText);
 }
 
 function clampRadius(radiusMeters: number | undefined) {
