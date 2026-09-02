@@ -1,7 +1,6 @@
-import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -23,11 +22,11 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: accent.primary,
         tabBarBackground: () => (
-          <BlurView
-            experimentalBlurMethod="dimezisBlurView"
-            intensity={isDark ? 18 : 32}
-            style={StyleSheet.absoluteFill}
-            tint={isDark ? 'dark' : 'light'}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface },
+            ]}
           />
         ),
         tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
@@ -35,8 +34,8 @@ export default function TabLayout() {
         tabBarItemStyle: styles.tabItem,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: {
-          backgroundColor: isDark ? 'rgba(23, 34, 30, 0.52)' : 'rgba(255, 255, 255, 0.34)',
-          borderColor: isDark ? 'rgba(184, 200, 194, 0.18)' : BrandColors.glassBorder,
+          backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface,
+          borderColor: isDark ? BrandColors.darkBorder : BrandColors.lightBorder,
           borderTopWidth: 0,
           borderWidth: StyleSheet.hairlineWidth,
           borderRadius: 22,
