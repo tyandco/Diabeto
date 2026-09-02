@@ -23,7 +23,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GlassView } from '@/components/glass-view';
 import { MarkdownText } from '@/components/markdown-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Fonts } from '@/constants/theme';
+import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
 import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto-chatbot';
@@ -51,6 +51,7 @@ export default function ChatScreen() {
   const healthContext = useHealthContext();
   const healthSummary = formatHealthContext(healthContext);
   const scrollRef = useRef<ScrollView>(null);
+  const tabBarClearance = Layout.tabBarHeight + Layout.tabBarBottomOffset + insets.bottom + 28;
   const starterMessages = useMemo<ChatMessage[]>(
     () => [
       {
@@ -397,7 +398,7 @@ export default function ChatScreen() {
           {isFindingCare ? <TypingBubble isDark={isDark} text="Finding nearby care..." /> : null}
         </ScrollView>
 
-        <View style={[styles.chatBottom, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <View style={[styles.chatBottom, { paddingBottom: tabBarClearance }]}>
           <ScrollView
             contentContainerStyle={styles.quickPrompts}
             horizontal
