@@ -21,6 +21,7 @@ const MAPPING = {
   'lightbulb.fill': 'lightbulb',
   'paperplane.fill': 'send',
   paperclip: 'attach-file',
+  'location.fill': 'location-on',
   'chart.bar.fill': 'bar-chart',
   'fork.knife': 'restaurant',
   'message.fill': 'chat',

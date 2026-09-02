@@ -30,12 +30,14 @@ import { sendDiabetoChat, type ChatImage, type ChatMessage } from '@/lib/diabeto
 import { formatDailyLogHistoryForAI, loadDailyLogs } from '@/lib/daily-log';
 import { formatHealthContext, useHealthContext } from '@/lib/health-context';
 import { useI18n } from '@/lib/localization';
+import { findNearbyCare, type NearbyCarePlace } from '@/lib/nearby-care';
 
 const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 const ribbonImage = require('@/assets/images/ribbon.png');
 
 type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'> & {
+  carePlaces?: NearbyCarePlace[];
   image?: Pick<ChatImage, 'fileName' | 'previewBase64' | 'previewMimeType' | 'uri'>;
 };
 
@@ -63,6 +65,7 @@ export default function ChatScreen() {
   const [attachedImage, setAttachedImage] = useState<ChatImage | null>(null);
   const [draft, setDraft] = useState('');
   const [dailyLogContext, setDailyLogContext] = useState<string | null>(null);
+  const [isFindingCare, setIsFindingCare] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
@@ -109,6 +112,7 @@ export default function ChatScreen() {
       .slice(-30)
       .map<StoredMessage>((message) => ({
         id: message.id,
+        carePlaces: message.carePlaces,
         image: message.image?.previewBase64
           ? {
               fileName: message.image.fileName,
@@ -126,7 +130,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages, isSending, attachedImage]);
+  }, [messages, isSending, isFindingCare, attachedImage]);
 
   useEffect(() => {
     loadDailyLogs(7)
@@ -218,7 +222,12 @@ export default function ChatScreen() {
   const sendMessage = async (overrideText?: string) => {
     const trimmed = (overrideText ?? draft).trim();
 
-    if ((!trimmed && !attachedImage) || isSending) {
+    if ((!trimmed && !attachedImage) || isSending || isFindingCare) {
+      return;
+    }
+
+    if (!attachedImage && isNearbyCareRequest(trimmed)) {
+      findCareFromRibbon(trimmed);
       return;
     }
 
@@ -272,6 +281,43 @@ export default function ChatScreen() {
   const clearMemory = () => {
     setMessages(starterMessages);
     AsyncStorage.removeItem(CHAT_MEMORY_KEY).catch(() => undefined);
+  };
+
+  const findCareFromRibbon = async (prompt = 'Find nearby care') => {
+    if (isSending || isFindingCare) {
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: `user-care-${Date.now()}`,
+      role: 'user',
+      text: prompt,
+    };
+
+    setMessages((current) => [...current, userMessage]);
+    setDraft('');
+    setIsFindingCare(true);
+
+    try {
+      const places = await findNearbyCare();
+      addMessage({
+        carePlaces: places,
+        id: `bot-care-${Date.now()}`,
+        role: 'bot',
+        text:
+          places.length > 0
+            ? 'Here are nearby care options from Google Places. Contact a licensed clinician for medical advice.'
+            : 'I could not find nearby hospitals or diabetes care options from your location.',
+      });
+    } catch (error) {
+      addMessage({
+        id: `bot-care-error-${Date.now()}`,
+        role: 'bot',
+        text: error instanceof Error ? error.message : 'Could not find nearby care right now.',
+      });
+    } finally {
+      setIsFindingCare(false);
+    }
   };
 
   const addBotMessage = (text: string) => {
@@ -348,6 +394,7 @@ export default function ChatScreen() {
             <AnimatedMessageBubble key={message.id} isDark={isDark} message={message} />
           ))}
           {isSending ? <TypingBubble isDark={isDark} /> : null}
+          {isFindingCare ? <TypingBubble isDark={isDark} text="Finding nearby care..." /> : null}
         </ScrollView>
 
         <View style={[styles.chatBottom, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -356,9 +403,23 @@ export default function ChatScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.quickPromptScroller}>
+            <Pressable
+              disabled={isSending || isFindingCare}
+              onPress={() => findCareFromRibbon()}
+              style={[styles.quickPrompt, styles.carePrompt, isDark && styles.quickPromptDark]}>
+              <IconSymbol
+                color={BrandColors.primary}
+                name="location.fill"
+                size={16}
+                weight="semibold"
+              />
+              <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
+                {isFindingCare ? 'Finding care...' : 'Find nearby care'}
+              </ThemedText>
+            </Pressable>
             {text.chat.quickPrompts.map((prompt) => (
               <Pressable
-                disabled={isSending}
+                disabled={isSending || isFindingCare}
                 key={prompt}
                 onPress={() => sendMessage(prompt)}
                 style={[styles.quickPrompt, isDark && styles.quickPromptDark]}>
@@ -396,9 +457,9 @@ export default function ChatScreen() {
             />
             <View style={styles.composerActions}>
               <Pressable
-                disabled={isSending}
+                disabled={isSending || isFindingCare}
                 onPress={chooseAttachmentSource}
-                style={[styles.attachButton, isSending && styles.sendButtonDisabled]}>
+                style={[styles.attachButton, (isSending || isFindingCare) && styles.sendButtonDisabled]}>
                 <IconSymbol
                   color={accent.primary}
                   name="paperclip"
@@ -408,12 +469,12 @@ export default function ChatScreen() {
                 <ThemedText style={styles.attachText}>{text.chat.attach}</ThemedText>
               </Pressable>
               <Pressable
-                disabled={isSending || !preferences.geminiApiKey.trim()}
+                disabled={isSending || isFindingCare || !preferences.geminiApiKey.trim()}
                 onPress={() => sendMessage()}
                 style={[
                   styles.sendButton,
                   { backgroundColor: accent.primary },
-                  (isSending || !preferences.geminiApiKey.trim()) && styles.sendButtonDisabled,
+                  (isSending || isFindingCare || !preferences.geminiApiKey.trim()) && styles.sendButtonDisabled,
                 ]}>
                 <IconSymbol
                   color="#ffffff"
@@ -421,7 +482,7 @@ export default function ChatScreen() {
                   size={17}
                   weight="semibold"
                 />
-                <ThemedText style={styles.sendText}>{isSending ? text.common.wait : text.common.send}</ThemedText>
+                <ThemedText style={styles.sendText}>{isSending || isFindingCare ? text.common.wait : text.common.send}</ThemedText>
               </Pressable>
             </View>
           </GlassView>
@@ -479,8 +540,52 @@ function AnimatedMessageBubble({ message, isDark }: { message: ChatMessage; isDa
           style={isUser ? styles.userText : [styles.botText, isDark && styles.botTextDark]}
           text={message.text}
         />
+        {!isUser && message.carePlaces?.length ? (
+          <View style={styles.careResults}>
+            {message.carePlaces.map((place) => (
+              <CarePlaceCard isDark={isDark} key={`${place.name}-${place.address}`} place={place} />
+            ))}
+          </View>
+        ) : null}
       </GlassView>
     </Animated.View>
+  );
+}
+
+function CarePlaceCard({ isDark, place }: { isDark: boolean; place: NearbyCarePlace }) {
+  const distance = formatDistance(place.distanceMeters);
+  const rating =
+    place.rating && place.reviewCount
+      ? `${place.rating.toFixed(1)} (${place.reviewCount})`
+      : place.rating
+        ? place.rating.toFixed(1)
+        : null;
+
+  return (
+    <View style={[styles.careCard, isDark && styles.careCardDark]}>
+      <ThemedText style={[styles.careName, isDark && styles.contextTextDark]}>{place.name}</ThemedText>
+      <ThemedText style={[styles.careMeta, isDark && styles.mutedDark]}>
+        {[distance, rating ? `Rated ${rating}` : null, formatOpenNow(place.openNow)].filter(Boolean).join(' / ')}
+      </ThemedText>
+      {place.address ? (
+        <ThemedText style={[styles.careAddress, isDark && styles.mutedDark]}>{place.address}</ThemedText>
+      ) : null}
+      <View style={styles.careActions}>
+        <Pressable onPress={() => Linking.openURL(place.mapsUrl)} style={styles.careActionButton}>
+          <ThemedText style={styles.careActionText}>Directions</ThemedText>
+        </Pressable>
+        {place.phone ? (
+          <Pressable onPress={() => Linking.openURL(`tel:${place.phone}`)} style={styles.careActionButton}>
+            <ThemedText style={styles.careActionText}>Call</ThemedText>
+          </Pressable>
+        ) : null}
+        {place.website ? (
+          <Pressable onPress={() => Linking.openURL(place.website!)} style={styles.careActionButton}>
+            <ThemedText style={styles.careActionText}>Website</ThemedText>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -516,7 +621,31 @@ function getPreviewUri(image: Pick<ChatImage, 'previewBase64' | 'previewMimeType
   return image.uri;
 }
 
-function TypingBubble({ isDark }: { isDark: boolean }) {
+function isNearbyCareRequest(text: string) {
+  return /\b(nearby care|hospital|doctor|clinic|endocrinologist|urgent care|medical care|find care)\b/i.test(text);
+}
+
+function formatDistance(distanceMeters: number | null) {
+  if (distanceMeters === null) {
+    return null;
+  }
+
+  if (distanceMeters < 1000) {
+    return `${distanceMeters} m away`;
+  }
+
+  return `${(distanceMeters / 1000).toFixed(1)} km away`;
+}
+
+function formatOpenNow(openNow: boolean | null) {
+  if (openNow === null) {
+    return null;
+  }
+
+  return openNow ? 'Open now' : 'May be closed';
+}
+
+function TypingBubble({ isDark, text: overrideText }: { isDark: boolean; text?: string }) {
   const { text } = useI18n();
 
   return (
@@ -526,7 +655,7 @@ function TypingBubble({ isDark }: { isDark: boolean }) {
       </View>
       <GlassView style={[styles.bubble, styles.botBubble, isDark && styles.botBubbleDark]}>
         <ThemedText style={[styles.botText, isDark && styles.botTextDark]}>
-          {text.chat.typing}
+          {overrideText ?? text.chat.typing}
         </ThemedText>
       </GlassView>
     </View>
@@ -691,6 +820,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 11,
     paddingVertical: 6,
+  },
+  carePrompt: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   quickPromptDark: {
     backgroundColor: BrandColors.darkSurface,
@@ -859,5 +993,57 @@ const styles = StyleSheet.create({
   sendText: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  careResults: {
+    gap: 10,
+    marginTop: 10,
+  },
+  careCard: {
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+    padding: 10,
+  },
+  careCardDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
+  },
+  careName: {
+    color: BrandColors.lightInputText,
+    fontSize: 14,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  careMeta: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  careAddress: {
+    color: BrandColors.lightMutedText,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  careActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  careActionButton: {
+    borderColor: BrandColors.primary,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  careActionText: {
+    color: BrandColors.primary,
+    fontSize: 12,
+    fontWeight: '900',
   },
 });

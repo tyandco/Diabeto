@@ -39,6 +39,12 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Diabeto uses your location to show nearby hospitals and clinician offices when you ask Ribbon for care options."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",

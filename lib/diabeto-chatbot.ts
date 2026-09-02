@@ -1,4 +1,5 @@
 import { getRibbonToneInstruction, type RibbonTone } from '@/lib/app-preferences';
+import type { NearbyCarePlace } from '@/lib/nearby-care';
 
 type ChatLanguage = 'en' | 'ar' | 'es' | 'secret';
 
@@ -12,6 +13,7 @@ export type ChatImage = {
 };
 
 export type ChatMessage = {
+  carePlaces?: NearbyCarePlace[];
   id: string;
   image?: ChatImage;
   role: 'bot' | 'user';
