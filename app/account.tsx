@@ -14,7 +14,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Layout } from '@/constants/theme';
+import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { useAuth } from '@/lib/auth-context';
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
   },
   input: {
     color: BrandColors.lightInputText,
+    fontFamily: Fonts.display,
     fontSize: 16,
     minHeight: 48,
     paddingHorizontal: 12,

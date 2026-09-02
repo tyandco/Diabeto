@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   updateAppPreferences,
@@ -1381,6 +1381,7 @@ const styles = StyleSheet.create({
   input: {
     color: BrandColors.lightInputText,
     flex: 1,
+    fontFamily: Fonts.display,
     fontSize: 17,
     paddingVertical: 10,
   },

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextStyle, type TextProps } from 'react-native';
 
 import { Fonts } from '@/constants/theme';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -19,6 +19,7 @@ export function ThemedText({
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
   const { language } = useI18n();
+  const flattenedStyle = StyleSheet.flatten(style);
   const fontSet =
     language === 'ar'
       ? {
@@ -31,21 +32,49 @@ export function ThemedText({
           regular: Fonts.display,
           semiBold: Fonts.displaySemiBold,
         };
+  const fontFamily = getFontFamily(type, fontSet, flattenedStyle);
 
   return (
     <Text
       style={[
         { color },
-        type === 'default' ? [styles.default, { fontFamily: fontSet.regular }] : undefined,
-        type === 'title' ? [styles.title, { fontFamily: fontSet.bold }] : undefined,
-        type === 'defaultSemiBold' ? [styles.defaultSemiBold, { fontFamily: fontSet.semiBold }] : undefined,
-        type === 'subtitle' ? [styles.subtitle, { fontFamily: fontSet.bold }] : undefined,
+        type === 'default' ? styles.default : undefined,
+        type === 'title' ? styles.title : undefined,
+        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
+        type === 'subtitle' ? styles.subtitle : undefined,
         type === 'link' ? styles.link : undefined,
         style,
+        { fontFamily },
       ]}
       {...rest}
     />
   );
+}
+
+function getFontFamily(
+  type: ThemedTextProps['type'],
+  fontSet: { bold: string; regular: string; semiBold: string },
+  style?: TextStyle
+) {
+  if (type === 'title' || type === 'subtitle') {
+    return fontSet.bold;
+  }
+
+  if (type === 'defaultSemiBold' || type === 'link') {
+    return fontSet.semiBold;
+  }
+
+  const weight = style?.fontWeight;
+
+  if (weight === 'bold' || weight === '700' || weight === '800' || weight === '900') {
+    return fontSet.bold;
+  }
+
+  if (weight === '500' || weight === '600') {
+    return fontSet.semiBold;
+  }
+
+  return fontSet.regular;
 }
 
 const styles = StyleSheet.create({
@@ -68,7 +97,6 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
   link: {
-    fontFamily: Fonts.displaySemiBold,
     lineHeight: 30,
     fontSize: 16,
     color: '#0a7ea4',

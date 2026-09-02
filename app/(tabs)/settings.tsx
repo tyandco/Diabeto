@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Layout } from '@/constants/theme';
+import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   updateAppPreferences,
@@ -379,6 +379,7 @@ const styles = StyleSheet.create({
   keyInput: {
     color: BrandColors.lightInputText,
     flex: 1,
+    fontFamily: Fonts.display,
     fontSize: 16,
     minHeight: 46,
     paddingHorizontal: 12,

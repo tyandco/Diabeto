@@ -14,7 +14,7 @@ export function GlassView({
   const isDark = useColorScheme() === 'dark';
 
   return (
-    <View style={[styles.base, isDark ? styles.dark : styles.light, style]}>
+    <View style={[styles.base, isDark ? styles.dark : styles.light, style, !isDark && styles.lightBorderless]}>
       {children}
     </View>
   );
@@ -31,5 +31,13 @@ const styles = StyleSheet.create({
   light: {
     backgroundColor: BrandColors.lightSurface,
     borderColor: BrandColors.lightBorder,
+  },
+  lightBorderless: {
+    borderColor: 'transparent',
+    borderWidth: 0,
+    boxShadow: 'none',
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
   },
 });

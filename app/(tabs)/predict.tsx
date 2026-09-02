@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Layout } from '@/constants/theme';
+import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
@@ -553,6 +553,7 @@ const styles = StyleSheet.create({
   input: {
     color: BrandColors.lightInputText,
     flex: 1,
+    fontFamily: Fonts.display,
     fontSize: 17,
     paddingVertical: 10,
   },

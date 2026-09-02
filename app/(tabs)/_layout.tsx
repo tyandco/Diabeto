@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BrandColors, Colors, Layout } from '@/constants/theme';
+import { BrandColors, Colors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAccentPalette } from '@/lib/app-preferences';
 import { useI18n } from '@/lib/localization';
@@ -25,7 +25,10 @@ export default function TabLayout() {
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface },
+              {
+                backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface,
+                borderRadius: 28,
+              },
             ]}
           />
         ),
@@ -37,17 +40,18 @@ export default function TabLayout() {
           backgroundColor: isDark ? BrandColors.darkSurface : BrandColors.lightSurface,
           borderColor: isDark ? BrandColors.darkBorder : BrandColors.lightBorder,
           borderTopWidth: 0,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderRadius: 22,
-          bottom: Layout.tabBarBottomOffset,
+          borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
+          borderRadius: 28,
+          bottom: Layout.tabBarBottomOffset + 6,
           height: Layout.tabBarHeight + insets.bottom,
-          left: 14,
+          left: 18,
+          overflow: 'hidden',
           paddingBottom: Math.max(insets.bottom, 6),
           paddingTop: 6,
           position: 'absolute',
-          right: 14,
-          boxShadow: isDark ? '0 8px 18px rgba(0, 0, 0, 0.28)' : '0 8px 18px rgba(24, 35, 31, 0.10)',
-          elevation: 12,
+          right: 18,
+          boxShadow: isDark ? '0 8px 18px rgba(0, 0, 0, 0.28)' : 'none',
+          elevation: isDark ? 12 : 0,
         },
         headerShown: false,
         tabBarButton: HapticTab,
@@ -105,6 +109,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tabLabel: {
+    fontFamily: Fonts.displayMedium,
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 14,
