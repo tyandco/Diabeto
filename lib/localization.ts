@@ -215,6 +215,7 @@ const en = {
     imageReady: 'Ready for Ribbon to review.',
     attach: 'Attach',
     typing: 'Ribbon is preparing a response...',
+    reviewLogsPrompt: 'Review my logs',
     quickPrompts: ['Suggest breakfast', 'Suggest lunch', 'Suggest dinner', 'Healthy snack ideas'],
   },
   log: {
@@ -499,6 +500,7 @@ const es: typeof en = {
     imageReady: 'Lista para que Ribbon la revise.',
     attach: 'Adjuntar',
     typing: 'Ribbon está preparando una respuesta...',
+    reviewLogsPrompt: 'Revisar mis registros',
     quickPrompts: ['Sugerir desayuno', 'Sugerir almuerzo', 'Sugerir cena', 'Ideas de snacks saludables'],
   },
   log: {
@@ -766,6 +768,7 @@ const secret: typeof en = {
     imageReady: 'mrrp purr.',
     attach: 'meow',
     typing: 'mrrp purr...',
+    reviewLogsPrompt: 'mew mrrp',
     quickPrompts: ['meow purr', 'mew purr', 'mrrp purr', 'purr mew'],
   },
   log: {
@@ -1049,6 +1052,7 @@ const ar: typeof en = {
     imageReady: 'جاهزة لمراجعة Ribbon.',
     attach: 'إرفاق',
     typing: 'Ribbon يجهز ردا...',
+    reviewLogsPrompt: 'راجع سجلاتي',
     quickPrompts: ['اقترح فطورا', 'اقترح غداء', 'اقترح عشاء', 'أفكار وجبات خفيفة صحية'],
   },
   log: {

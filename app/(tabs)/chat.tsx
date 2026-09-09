@@ -35,6 +35,8 @@ import { findNearbyCare, type NearbyCarePlace } from '@/lib/nearby-care';
 const CHAT_MEMORY_KEY = 'diabeto.chat.messages.v1';
 const GOOGLE_AI_STUDIO_KEY_URL = 'https://aistudio.google.com/app/apikey';
 const ribbonImage = require('@/assets/images/ribbon.png');
+const LOG_REVIEW_PROMPT =
+  'Review my recent Diabeto logs in detail. Explain the strongest trends in glucose, weight, activity, sleep, water, balanced meals, and mood. Give specific next steps for the next 7 days. Do not diagnose.';
 
 type StoredMessage = Pick<ChatMessage, 'id' | 'role' | 'text'> & {
   carePlaces?: NearbyCarePlace[];
@@ -416,6 +418,14 @@ export default function ChatScreen() {
               />
               <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
                 {isFindingCare ? 'Finding care...' : 'Find nearby care'}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              disabled={isSending || isFindingCare}
+              onPress={() => sendMessage(LOG_REVIEW_PROMPT)}
+              style={[styles.quickPrompt, isDark && styles.quickPromptDark]}>
+              <ThemedText style={[styles.quickPromptText, isDark && styles.contextTextDark]}>
+                {text.chat.reviewLogsPrompt}
               </ThemedText>
             </Pressable>
             {text.chat.quickPrompts.map((prompt) => (
