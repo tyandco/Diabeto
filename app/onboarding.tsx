@@ -1336,9 +1336,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     backgroundColor: '#ffffff',
-    borderColor: BrandColors.lightBorder,
     borderRadius: 36,
-    borderWidth: 1,
     height: 154,
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1407,9 +1405,9 @@ const styles = StyleSheet.create({
   },
   accountDescriptionText: {
     color: BrandColors.lightInputText,
-    fontSize: 20,
-    fontWeight: '800',
-    lineHeight: 28,
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 23,
   },
   helpText: {
     lineHeight: 22,
