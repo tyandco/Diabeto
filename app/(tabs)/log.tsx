@@ -39,6 +39,7 @@ export default function DailyLogScreen() {
   const { language, text } = useI18n();
   const [entries, setEntries] = useState<DailyLogEntry[]>([]);
   const [draft, setDraft] = useState<DailyLog>(initialDailyLog);
+  const [selectedLogDate, setSelectedLogDate] = useState(getTodayLogDate());
   const [healthContext, setLoadedHealthContext] = useState<HealthContext | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
@@ -82,9 +83,27 @@ export default function DailyLogScreen() {
   }, []);
 
   const openEditor = async () => {
-    const todayLog = await loadDailyLog();
+    const today = getTodayLogDate();
+    const todayLog = await loadDailyLog(today);
+    setSelectedLogDate(today);
     setDraft(withProfileDefaults(todayLog ?? initialDailyLog, healthContext?.profile ?? latestProfile));
     setIsEditorOpen(true);
+  };
+
+  const adjustSelectedLogDate = async (daysDelta: number) => {
+    const nextDate = addDaysToLogDate(selectedLogDate, daysDelta);
+    const nextLog = await loadDailyLog(nextDate);
+
+    setSelectedLogDate(nextDate);
+    setDraft(withProfileDefaults(nextLog ?? initialDailyLog, healthContext?.profile ?? latestProfile));
+  };
+
+  const selectTodayLog = async () => {
+    const today = getTodayLogDate();
+    const todayLog = await loadDailyLog(today);
+
+    setSelectedLogDate(today);
+    setDraft(withProfileDefaults(todayLog ?? initialDailyLog, healthContext?.profile ?? latestProfile));
   };
 
   const update = <Key extends keyof DailyLog>(key: Key, value: DailyLog[Key]) => {
@@ -92,7 +111,7 @@ export default function DailyLogScreen() {
   };
 
   const saveDraft = async () => {
-    await saveDailyLog(draft);
+    await saveDailyLog(draft, selectedLogDate);
     const profile = parseProfileFromLog(draft);
 
     if (profile) {
@@ -328,7 +347,7 @@ export default function DailyLogScreen() {
               <View>
                 <ThemedText type="subtitle">{text.log.logYourDay}</ThemedText>
                 <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-                  {formatDate(getTodayLogDate(), language)}
+                  {formatDate(selectedLogDate, language)}
                 </ThemedText>
               </View>
               <Pressable onPress={() => setIsEditorOpen(false)} style={styles.closeButton}>
@@ -337,6 +356,31 @@ export default function DailyLogScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
+              <View style={[styles.datePicker, isDark && styles.timePickerDark]}>
+                <Pressable
+                  accessibilityLabel={text.log.previousDay}
+                  onPress={() => adjustSelectedLogDate(-1)}
+                  style={styles.dateButton}>
+                  <Feather color={accent.primary} name="chevron-left" size={20} />
+                </Pressable>
+                <View style={styles.dateCopy}>
+                  <ThemedText type="defaultSemiBold">{formatDate(selectedLogDate, language)}</ThemedText>
+                  <ThemedText style={[styles.reminderMessage, isDark && styles.mutedDark]}>
+                    {selectedLogDate === getTodayLogDate() ? text.log.todayLog : text.log.pastLog}
+                  </ThemedText>
+                </View>
+                <Pressable
+                  accessibilityLabel={text.log.nextDay}
+                  disabled={selectedLogDate === getTodayLogDate()}
+                  onPress={() => adjustSelectedLogDate(1)}
+                  style={[styles.dateButton, selectedLogDate === getTodayLogDate() && styles.disabledButton]}>
+                  <Feather color={accent.primary} name="chevron-right" size={20} />
+                </Pressable>
+                <Pressable onPress={selectTodayLog} style={[styles.todayButton, { borderColor: accent.primary }]}>
+                  <ThemedText style={[styles.todayButtonText, { color: accent.primary }]}>{text.log.today}</ThemedText>
+                </Pressable>
+              </View>
+
               <ThemedText type="defaultSemiBold">{text.log.profileDetails}</ThemedText>
               <View style={styles.grid}>
                 <Field
@@ -684,6 +728,15 @@ function formatDate(date: string, language: 'en' | 'ar' | 'es' | 'secret') {
   });
 }
 
+function addDaysToLogDate(date: string, daysDelta: number) {
+  const [year, month, day] = date.split('-').map(Number);
+  const nextDate = new Date(Date.UTC(year, month - 1, day));
+
+  nextDate.setUTCDate(nextDate.getUTCDate() + daysDelta);
+
+  return nextDate.toISOString().slice(0, 10);
+}
+
 function addMinutesToReminderTime(time: ReminderTime, minutesDelta: number): ReminderTime {
   const totalMinutes = (time.hour * 60 + time.minute + minutesDelta + 24 * 60) % (24 * 60);
 
@@ -998,6 +1051,44 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     minWidth: 76,
     textAlign: 'center',
+  },
+  datePicker: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.44)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between',
+    padding: 12,
+  },
+  dateButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.primarySoft,
+    borderRadius: 12,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  dateCopy: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 2,
+    minWidth: 130,
+  },
+  todayButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 38,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  todayButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
   },
   emptyPanel: {
     backgroundColor: 'rgba(255, 255, 255, 0.58)',

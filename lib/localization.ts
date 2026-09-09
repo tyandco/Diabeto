@@ -53,7 +53,7 @@ const en = {
     tips: [
       'Pair carbs with protein or fiber to help keep blood sugar steadier.',
       'A 10-minute walk after a meal can support better glucose control.',
-      'Keep water visible. It makes sugary drinks easier to skip.',
+      'Keep water visible. It makes high sugar consumption easier to avoid.',
       'Sleep changes cravings and energy. Track it alongside meals.',
     ],
     metrics: {
@@ -100,7 +100,7 @@ const en = {
     low: 'Low',
     moderate: 'Moderate',
     high: 'High',
-    sugaryDrinks: 'Sugary drinks',
+    sugaryDrinks: 'Sugar consumption',
     rarely: 'Rarely',
     sometimes: 'Sometimes',
     often: 'Often',
@@ -111,7 +111,7 @@ const en = {
     glucose: 'Glucose',
     whatThisMeans: 'What this means',
     glucoseMeaning:
-      'If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history, activity, and sugary drink habits. A lab glucose or A1C test can make the picture clearer later.',
+      'If you cannot measure glucose, Diabeto estimates risk using age, BMI, family history, activity, and sugar consumption habits. A lab glucose or A1C test can make the picture clearer later.',
     meetRibbon: 'Meet Ribbon',
     ribbonBody:
       'Ribbon is your Diabeto health companion. She can help you turn your risk estimate into practical meal ideas, food swaps, activity goals, and safer daily habits.',
@@ -233,6 +233,11 @@ const en = {
     noLogs: 'No logs yet',
     emptyHelp: "Tap Log your day to add today's health snapshot.",
     logYourDay: 'Log your day',
+    previousDay: 'Previous day',
+    nextDay: 'Next day',
+    today: 'Today',
+    todayLog: "Today's log",
+    pastLog: 'Past day log',
     glucose: 'Glucose',
     activity: 'Activity',
     sleep: 'Sleep',
@@ -275,13 +280,13 @@ const en = {
     doTitle: 'What to Do',
     habitIdeas: [
       'Walk for 10 to 20 minutes after meals when possible.',
-      'Keep water nearby and avoid buying sugary drinks for home.',
+      'Keep water nearby and reduce high sugar consumption at home.',
       'Sleep 7 to 9 hours because poor sleep can raise cravings and glucose levels.',
       'Check weight, activity, and glucose trends weekly instead of judging one day.',
     ],
     modelTitle: 'About the Model',
     modelBody:
-      'Diabeto uses a lightweight local scoring model based on common risk factors: age, BMI, glucose, family history, activity level, and sugary drink intake.',
+      'Diabeto uses a lightweight local scoring model based on common risk factors: age, BMI, glucose, family history, activity level, and sugar consumption.',
     modelFuture:
       'A future version can connect this screen to a trained Python or cloud AI model after you collect a real dataset and decide where predictions should run.',
   },
@@ -339,7 +344,7 @@ const es: typeof en = {
     tips: [
       'Combina carbohidratos con proteína o fibra para ayudar a estabilizar la glucosa.',
       'Caminar 10 minutos después de comer puede apoyar el control de glucosa.',
-      'Mantén agua a la vista. Ayuda a evitar bebidas azucaradas.',
+      'Mantén agua a la vista. Ayuda a reducir el consumo de azúcar.',
       'El sueño cambia los antojos y la energía. Regístralo junto con tus comidas.',
     ],
     metrics: {
@@ -386,7 +391,7 @@ const es: typeof en = {
     low: 'Baja',
     moderate: 'Moderada',
     high: 'Alta',
-    sugaryDrinks: 'Bebidas azucaradas',
+    sugaryDrinks: 'Consumo de azúcar',
     rarely: 'Rara vez',
     sometimes: 'A veces',
     often: 'A menudo',
@@ -397,7 +402,7 @@ const es: typeof en = {
     glucose: 'Glucosa',
     whatThisMeans: 'Qué significa esto',
     glucoseMeaning:
-      'Si no puedes medir la glucosa, Diabeto estima el riesgo usando edad, IMC, antecedentes familiares, actividad y hábitos de bebidas azucaradas. Una prueba de glucosa o A1C puede aclarar mejor el panorama más adelante.',
+      'Si no puedes medir la glucosa, Diabeto estima el riesgo usando edad, IMC, antecedentes familiares, actividad y hábitos de consumo de azúcar. Una prueba de glucosa o A1C puede aclarar mejor el panorama más adelante.',
     meetRibbon: 'Conoce a Ribbon',
     ribbonBody:
       'Ribbon es tu acompañante de salud en Diabeto. Puede ayudarte a convertir tu estimación de riesgo en ideas prácticas de comidas, cambios de alimentos, objetivos de actividad y hábitos diarios más seguros.',
@@ -518,6 +523,11 @@ const es: typeof en = {
     noLogs: 'Aún no hay registros',
     emptyHelp: 'Toca Registrar tu día para añadir la instantánea de salud de hoy.',
     logYourDay: 'Registrar tu día',
+    previousDay: 'Día anterior',
+    nextDay: 'Día siguiente',
+    today: 'Hoy',
+    todayLog: 'Registro de hoy',
+    pastLog: 'Registro de día anterior',
     glucose: 'Glucosa',
     activity: 'Actividad',
     sleep: 'Sueño',
@@ -560,13 +570,13 @@ const es: typeof en = {
     doTitle: 'Qué hacer',
     habitIdeas: [
       'Camina de 10 a 20 minutos después de las comidas cuando sea posible.',
-      'Ten agua cerca y evita comprar bebidas azucaradas para casa.',
+      'Ten agua cerca y reduce el consumo de azúcar en casa.',
       'Duerme de 7 a 9 horas porque dormir mal puede aumentar antojos y niveles de glucosa.',
       'Revisa tendencias de peso, actividad y glucosa cada semana en vez de juzgar un solo día.',
     ],
     modelTitle: 'Sobre el modelo',
     modelBody:
-      'Diabeto usa un modelo local ligero de puntuación basado en factores de riesgo comunes: edad, IMC, glucosa, antecedentes familiares, nivel de actividad y consumo de bebidas azucaradas.',
+      'Diabeto usa un modelo local ligero de puntuación basado en factores de riesgo comunes: edad, IMC, glucosa, antecedentes familiares, nivel de actividad y consumo de azúcar.',
     modelFuture:
       'Una versión futura puede conectar esta pantalla a un modelo Python entrenado o a un modelo de IA en la nube cuando tengas un conjunto de datos real y decidas dónde deben ejecutarse las predicciones.',
   },
@@ -657,7 +667,7 @@ const secret: typeof en = {
     low: 'purr',
     moderate: 'mrrp',
     high: 'hiss',
-    sugaryDrinks: 'hiss meow',
+    sugaryDrinks: 'hiss purr',
     rarely: 'purr purr',
     sometimes: 'mrrp purr',
     often: 'hiss hiss',
@@ -786,6 +796,11 @@ const secret: typeof en = {
     noLogs: 'mew? hiss',
     emptyHelp: 'mew meow.',
     logYourDay: 'mew meow',
+    previousDay: 'purr day',
+    nextDay: 'mrrp day',
+    today: 'today',
+    todayLog: 'today mew',
+    pastLog: 'purr mew',
     glucose: 'hiss?',
     activity: 'mrrp mrrp',
     sleep: 'purr',
@@ -890,7 +905,7 @@ const ar: typeof en = {
     tips: [
       'اجمع الكربوهيدرات مع البروتين أو الألياف للمساعدة في ثبات سكر الدم.',
       'المشي 10 دقائق بعد الوجبة يمكن أن يدعم التحكم في الجلوكوز.',
-      'اجعل الماء أمامك. هذا يسهل تجنب المشروبات السكرية.',
+      'اجعل الماء أمامك. هذا يساعد على تقليل استهلاك السكر.',
       'النوم يؤثر في الشهية والطاقة. سجله مع الوجبات.',
     ],
     metrics: {
@@ -937,7 +952,7 @@ const ar: typeof en = {
     low: 'منخفض',
     moderate: 'متوسط',
     high: 'مرتفع',
-    sugaryDrinks: 'المشروبات السكرية',
+    sugaryDrinks: 'استهلاك السكر',
     rarely: 'نادرا',
     sometimes: 'أحيانا',
     often: 'غالبا',
@@ -948,7 +963,7 @@ const ar: typeof en = {
     glucose: 'الجلوكوز',
     whatThisMeans: 'ماذا يعني ذلك',
     glucoseMeaning:
-      'إذا لم تستطع قياس الجلوكوز، يقدر Diabeto الخطورة باستخدام العمر ومؤشر كتلة الجسم والتاريخ العائلي والنشاط وعادات المشروبات السكرية. يمكن لفحص الجلوكوز أو A1C أن يجعل الصورة أوضح لاحقا.',
+      'إذا لم تستطع قياس الجلوكوز، يقدر Diabeto الخطورة باستخدام العمر ومؤشر كتلة الجسم والتاريخ العائلي والنشاط وعادات استهلاك السكر. يمكن لفحص الجلوكوز أو A1C أن يجعل الصورة أوضح لاحقا.',
     meetRibbon: 'تعرف على Ribbon',
     ribbonBody:
       'Ribbon هو مرافقك الصحي في Diabeto. يمكنه مساعدتك على تحويل تقدير الخطورة إلى أفكار وجبات عملية وبدائل طعام وأهداف نشاط وعادات يومية أكثر أمانا.',
@@ -1070,6 +1085,11 @@ const ar: typeof en = {
     noLogs: 'لا توجد سجلات بعد',
     emptyHelp: 'اضغط سجل يومك لإضافة لقطة صحية لليوم.',
     logYourDay: 'سجل يومك',
+    previousDay: 'اليوم السابق',
+    nextDay: 'اليوم التالي',
+    today: 'اليوم',
+    todayLog: 'سجل اليوم',
+    pastLog: 'سجل يوم سابق',
     glucose: 'الجلوكوز',
     activity: 'النشاط',
     sleep: 'النوم',
@@ -1112,13 +1132,13 @@ const ar: typeof en = {
     doTitle: 'ماذا تفعل',
     habitIdeas: [
       'امش 10 إلى 20 دقيقة بعد الوجبات عندما يكون ذلك ممكنا.',
-      'احتفظ بالماء قريبا وتجنب شراء المشروبات السكرية للمنزل.',
+      'احتفظ بالماء قريبا وقلل استهلاك السكر في المنزل.',
       'نم 7 إلى 9 ساعات لأن قلة النوم قد تزيد الرغبة في الطعام ومستوى الجلوكوز.',
       'راجع اتجاهات الوزن والنشاط والجلوكوز أسبوعيا بدلا من الحكم على يوم واحد.',
     ],
     modelTitle: 'عن النموذج',
     modelBody:
-      'يستخدم Diabeto نموذج تسجيل محليا خفيفا يعتمد على عوامل خطورة شائعة: العمر ومؤشر كتلة الجسم والجلوكوز والتاريخ العائلي ومستوى النشاط وتناول المشروبات السكرية.',
+      'يستخدم Diabeto نموذج تسجيل محليا خفيفا يعتمد على عوامل خطورة شائعة: العمر ومؤشر كتلة الجسم والجلوكوز والتاريخ العائلي ومستوى النشاط واستهلاك السكر.',
     modelFuture:
       'يمكن لإصدار مستقبلي ربط هذه الشاشة بنموذج Python مدرب أو نموذج ذكاء اصطناعي سحابي بعد جمع مجموعة بيانات حقيقية وتحديد مكان تشغيل التنبؤات.',
   },
