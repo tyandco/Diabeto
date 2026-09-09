@@ -1337,7 +1337,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderColor: BrandColors.lightBorder,
-    borderRadius: 8,
+    borderRadius: 36,
     borderWidth: 1,
     height: 154,
     justifyContent: 'center',
@@ -1345,6 +1345,7 @@ const styles = StyleSheet.create({
     width: 154,
   },
   accountLogoImage: {
+    borderRadius: 36,
     height: 154,
     width: 154,
   },
