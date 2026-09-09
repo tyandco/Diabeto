@@ -859,13 +859,28 @@ function OnboardingAccountPage({
   }
 
   return (
-    <View style={styles.page}>
-      <ThemedText type="title" style={styles.title}>
-        {text.account.onboardingTitle}
-      </ThemedText>
-      <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
-        {text.account.onboardingSubtitle}
-      </ThemedText>
+    <View style={[styles.page, styles.accountWelcomePage]}>
+      <View style={styles.accountHero}>
+        <ThemedText style={[styles.welcomePrefix, isDark && styles.welcomePrefixDark]}>
+          {text.onboarding.welcomePrefix}
+        </ThemedText>
+        <ThemedText type="title" style={styles.welcomeBrand}>
+          Diabeto
+        </ThemedText>
+        <ThemedText style={[styles.welcomeTagline, isDark && styles.mutedDark]}>
+          {text.onboarding.appTagline}
+        </ThemedText>
+      </View>
+
+      <View style={styles.accountLogoMark}>
+        <Image source={appIconImage} style={styles.accountLogoImage} />
+      </View>
+
+      <View style={[styles.accountDescriptionPanel, isDark && styles.panelDark]}>
+        <ThemedText style={[styles.accountDescriptionText, isDark && styles.mutedDark]}>
+          {text.onboarding.welcomeSubtitle}
+        </ThemedText>
+      </View>
 
       <View style={[styles.panel, isDark && styles.panelDark]}>
         {!auth.isConfigured ? (
@@ -1163,6 +1178,36 @@ const styles = StyleSheet.create({
   page: {
     gap: 20,
   },
+  accountWelcomePage: {
+    gap: 22,
+  },
+  accountHero: {
+    alignItems: 'center',
+    gap: 3,
+    paddingTop: 12,
+  },
+  welcomePrefix: {
+    color: BrandColors.lightInputText,
+    fontSize: 34,
+    lineHeight: 40,
+    textAlign: 'center',
+  },
+  welcomePrefixDark: {
+    color: BrandColors.darkInputText,
+  },
+  welcomeBrand: {
+    color: BrandColors.primary,
+    fontSize: 50,
+    lineHeight: 58,
+    textAlign: 'center',
+  },
+  welcomeTagline: {
+    color: BrandColors.lightInputText,
+    fontSize: 17,
+    fontWeight: '700',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
   languageRow: {
     alignItems: 'center',
     backgroundColor: BrandColors.lightSurface,
@@ -1287,6 +1332,22 @@ const styles = StyleSheet.create({
     height: 92,
     width: 92,
   },
+  accountLogoMark: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 154,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: 154,
+  },
+  accountLogoImage: {
+    height: 154,
+    width: 154,
+  },
   mascotImage: {
     height: 172,
     width: 172,
@@ -1335,6 +1396,19 @@ const styles = StyleSheet.create({
   panelDark: {
     backgroundColor: BrandColors.darkSurface,
     borderColor: BrandColors.darkBorder,
+  },
+  accountDescriptionPanel: {
+    backgroundColor: BrandColors.lightSurface,
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 18,
+  },
+  accountDescriptionText: {
+    color: BrandColors.lightInputText,
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 28,
   },
   helpText: {
     lineHeight: 22,

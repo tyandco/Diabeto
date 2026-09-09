@@ -67,6 +67,8 @@ const en = {
   },
   onboarding: {
     pageTitles: ['Welcome', 'Terms', 'Health Details', 'Glucose Access', 'Ribbon'],
+    welcomePrefix: 'Welcome to',
+    appTagline: 'the diabetes prevention app.',
     startDiabeto: 'Start Diabeto',
     welcomeSubtitle:
       'A diabetes prevention assistant that estimates risk and gives practical habit advice from simple health details.',
@@ -138,7 +140,7 @@ const en = {
     accountSetupNeeded: 'Add Supabase environment variables to enable accounts.',
     credits: 'Credits',
     creditsSubtitle: 'People and tools behind Diabeto.',
-    creditsItems: ['Design and development: Ty and Co', 'Built with Expo and React Native', 'Accounts powered by Supabase', 'Nearby care powered by Google Maps'],
+    creditsItems: ['Design and development: tyandco, spikesaeed, majedalremeithi-png', 'Built with Expo and React Native', 'Accounts powered by Supabase', 'Nearby care powered by Google Maps (Google Places API)', 'tyandco.net'],
     advanced: 'Advanced',
     ribbonTone: 'Ribbon Tone',
     ribbonToneLabels: {
@@ -341,6 +343,8 @@ const es: typeof en = {
   },
   onboarding: {
     pageTitles: ['Bienvenida', 'Términos', 'Datos de salud', 'Acceso a glucosa', 'Ribbon'],
+    welcomePrefix: 'Bienvenido a',
+    appTagline: 'la app de prevención de diabetes.',
     startDiabeto: 'Empezar Diabeto',
     welcomeSubtitle:
       'Un asistente de prevención de diabetes que estima el riesgo y da consejos prácticos de hábitos a partir de datos de salud simples.',
@@ -609,6 +613,8 @@ const secret: typeof en = {
   },
   onboarding: {
     pageTitles: ['meow', 'hiss', 'mew mew', 'hiss?', 'mrrp'],
+    welcomePrefix: 'mrrp',
+    appTagline: 'hiss? purr app.',
     startDiabeto: 'Diabeto meow',
     welcomeSubtitle: 'meow purr hiss? mrrp mew.',
     welcomeItems: ['hiss? mew', 'purr meow', 'mrrp meow'],
@@ -868,6 +874,8 @@ const ar: typeof en = {
   },
   onboarding: {
     pageTitles: ['الترحيب', 'الشروط', 'بيانات الصحة', 'قياس الجلوكوز', 'Ribbon'],
+    welcomePrefix: 'مرحبا بك في',
+    appTagline: 'تطبيق الوقاية من السكري.',
     startDiabeto: 'ابدأ Diabeto',
     welcomeSubtitle:
       'مساعد للوقاية من السكري يقدر مستوى الخطورة ويقدم نصائح عادات عملية من بيانات صحية بسيطة.',
