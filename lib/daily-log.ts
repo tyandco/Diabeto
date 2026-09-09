@@ -7,13 +7,19 @@ const DAILY_LOG_KEY_PREFIX = 'diabeto.daily-log.';
 export type DailyLogMood = 'steady' | 'tired' | 'stressed' | 'good';
 
 export type DailyLog = {
+  age: string;
   activityMinutes: string;
+  activityLevel: 'low' | 'moderate' | 'high';
   balancedMeals: number;
+  familyHistory: boolean;
   glucoseMgDl: string;
+  heightCm: string;
   mood: DailyLogMood;
   notes: string;
   sleepHours: string;
+  sugaryDrinks: 'rarely' | 'sometimes' | 'often';
   waterCups: number;
+  weightKg: string;
 };
 
 export type DailyLogEntry = {
@@ -22,13 +28,19 @@ export type DailyLogEntry = {
 };
 
 export const initialDailyLog: DailyLog = {
+  age: '',
   activityMinutes: '',
+  activityLevel: 'moderate',
   balancedMeals: 2,
+  familyHistory: false,
   glucoseMgDl: '',
+  heightCm: '',
   mood: 'steady',
   notes: '',
   sleepHours: '',
+  sugaryDrinks: 'sometimes',
   waterCups: 6,
+  weightKg: '',
 };
 
 export function getTodayLogDate() {
@@ -92,11 +104,17 @@ export function formatDailyLogHistoryForAI(entries: DailyLogEntry[]) {
     .map(({ date, log }) =>
       [
         date,
+        `age=${log.age || 'na'}`,
+        `ht=${log.heightCm || 'na'}cm`,
+        `wt=${log.weightKg || 'na'}kg`,
         `glu=${log.glucoseMgDl || 'na'}`,
         `act=${log.activityMinutes || '0'}m`,
+        `activityLevel=${log.activityLevel}`,
         `sleep=${log.sleepHours || 'na'}h`,
         `water=${log.waterCups}`,
         `meals=${log.balancedMeals}`,
+        `sugary=${log.sugaryDrinks}`,
+        `famHx=${log.familyHistory ? 'y' : 'n'}`,
         `mood=${log.mood}`,
         log.notes ? `note=${compactNote(log.notes)}` : null,
       ]

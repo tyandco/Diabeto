@@ -66,6 +66,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="predict"
         options={{
+          href: null,
           title: text.tabs.predict,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}

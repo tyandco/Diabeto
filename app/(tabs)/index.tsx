@@ -84,7 +84,7 @@ export default function HomeScreen() {
               <MetricChip label={text.home.metrics.coachLabel} value={text.home.metrics.coachValue} isDark={isDark} />
             </View>
             <Pressable
-              onPress={() => router.push('/(tabs)/predict')}
+              onPress={() => router.push('/(tabs)/log')}
               style={[styles.primaryAction, { backgroundColor: accent.primary }]}>
               <IconSymbol color="#ffffff" name="stethoscope" size={18} />
               <ThemedText style={styles.primaryActionText}>{text.home.openPredict}</ThemedText>

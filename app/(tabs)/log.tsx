@@ -1,5 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -7,9 +7,10 @@ import { ThemedView } from '@/components/themed-view';
 import { GlassView } from '@/components/glass-view';
 import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAccentPalette } from '@/lib/app-preferences';
+import { useAccentPalette, useAppPreferences } from '@/lib/app-preferences';
 import {
   calculateDailyLogStreak,
+  formatDailyLogHistoryForAI,
   getTodayLogDate,
   initialDailyLog,
   loadDailyLog,
@@ -19,6 +20,8 @@ import {
   type DailyLogEntry,
   type DailyLogMood,
 } from '@/lib/daily-log';
+import { predictDiabetesRisk, type DiabetesPrediction, type DiabetesProfile } from '@/lib/diabetes-advisor';
+import { formatHealthContext, loadHealthContext, saveHealthContext, setHealthContext, type HealthContext } from '@/lib/health-context';
 import {
   getDailyLogReminderEnabled,
   getDailyLogReminderTime,
@@ -27,19 +30,27 @@ import {
   type ReminderTime,
 } from '@/lib/log-reminders';
 import { useI18n } from '@/lib/localization';
+import { sendDiabetoChat, type ChatMessage } from '@/lib/diabeto-chatbot';
 
 export default function DailyLogScreen() {
   const accent = useAccentPalette();
+  const preferences = useAppPreferences();
   const isDark = useColorScheme() === 'dark';
   const { language, text } = useI18n();
   const [entries, setEntries] = useState<DailyLogEntry[]>([]);
   const [draft, setDraft] = useState<DailyLog>(initialDailyLog);
+  const [healthContext, setLoadedHealthContext] = useState<HealthContext | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const [isReminderSaving, setIsReminderSaving] = useState(false);
+  const [isRibbonReviewing, setIsRibbonReviewing] = useState(false);
   const [reminderTime, setReminderTime] = useState<ReminderTime>({ hour: 20, minute: 0 });
   const [reminderMessage, setReminderMessage] = useState('');
+  const [ribbonReview, setRibbonReview] = useState('');
   const streak = calculateDailyLogStreak(entries);
+  const latestProfile = useMemo(() => getLatestProfile(entries, healthContext?.profile ?? null), [entries, healthContext]);
+  const prediction = useMemo(() => (latestProfile ? predictDiabetesRisk(latestProfile) : null), [latestProfile]);
+  const trends = useMemo(() => analyzeLogTrends(entries), [entries]);
 
   const refreshLogs = useCallback(() => {
     loadDailyLogs(30)
@@ -52,6 +63,16 @@ export default function DailyLogScreen() {
   }, [refreshLogs]);
 
   useEffect(() => {
+    loadHealthContext()
+      .then(setLoadedHealthContext)
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    setHealthContext(latestProfile && prediction ? { profile: latestProfile, prediction } : healthContext);
+  }, [healthContext, latestProfile, prediction]);
+
+  useEffect(() => {
     Promise.all([getDailyLogReminderEnabled(), getDailyLogReminderTime()])
       .then(([enabled, time]) => {
         setIsReminderEnabled(enabled);
@@ -62,7 +83,7 @@ export default function DailyLogScreen() {
 
   const openEditor = async () => {
     const todayLog = await loadDailyLog();
-    setDraft(todayLog ?? initialDailyLog);
+    setDraft(withProfileDefaults(todayLog ?? initialDailyLog, healthContext?.profile ?? latestProfile));
     setIsEditorOpen(true);
   };
 
@@ -72,8 +93,57 @@ export default function DailyLogScreen() {
 
   const saveDraft = async () => {
     await saveDailyLog(draft);
+    const profile = parseProfileFromLog(draft);
+
+    if (profile) {
+      const nextHealthContext = {
+        profile,
+        prediction: predictDiabetesRisk(profile),
+      };
+
+      setLoadedHealthContext(nextHealthContext);
+      await saveHealthContext(nextHealthContext);
+    }
+
     setIsEditorOpen(false);
     refreshLogs();
+  };
+
+  const reviewLogsWithRibbon = async () => {
+    if (!preferences.geminiApiKey.trim()) {
+      setRibbonReview(text.log.ribbonNeedsKey);
+      return;
+    }
+
+    setIsRibbonReviewing(true);
+    setRibbonReview('');
+
+    try {
+      const healthForAI = latestProfile && prediction
+        ? formatHealthContext({ profile: latestProfile, prediction })
+        : formatHealthContext(healthContext);
+      const recentLogs = formatDailyLogHistoryForAI(entries);
+      const prompt = [
+        'Review my recent Diabeto logs in detail.',
+        'Explain the strongest trends in glucose, weight, activity, sleep, water, balanced meals, and mood.',
+        'Give specific next steps for the next 7 days. Do not diagnose.',
+      ].join(' ');
+      const messages: ChatMessage[] = [{ id: `log-review-${Date.now()}`, role: 'user', text: prompt }];
+      const reply = await sendDiabetoChat(
+        messages,
+        healthForAI,
+        preferences.ribbonTone,
+        recentLogs,
+        preferences.geminiApiKey,
+        language
+      );
+
+      setRibbonReview(reply);
+    } catch (error) {
+      setRibbonReview(error instanceof Error ? error.message : text.chat.fallbackError);
+    } finally {
+      setIsRibbonReviewing(false);
+    }
   };
 
   const toggleReminder = async () => {
@@ -120,6 +190,63 @@ export default function DailyLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
+        <PredictionPanel isDark={isDark} prediction={prediction} profile={latestProfile} />
+
+        <GlassView style={[styles.summaryPanel, isDark && styles.panelDark]}>
+          <View style={styles.summaryCopy}>
+            <ThemedText type="subtitle">{text.log.trendsTitle}</ThemedText>
+            {trends.length > 0 ? (
+              <View style={styles.trendList}>
+                {trends.map((trend) => (
+                  <View key={trend} style={styles.trendRow}>
+                    <View style={[styles.trendDot, { backgroundColor: accent.primary }]} />
+                    <ThemedText style={styles.trendText}>{trend}</ThemedText>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+                {text.log.trendsEmpty}
+              </ThemedText>
+            )}
+          </View>
+        </GlassView>
+
+        <GlassView style={[styles.summaryPanel, isDark && styles.panelDark]}>
+          <View style={styles.summaryCopy}>
+            <ThemedText type="subtitle">{text.log.ribbonReviewTitle}</ThemedText>
+            <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+              {preferences.geminiApiKey.trim() ? text.chat.usingAll : text.log.ribbonNeedsKey}
+            </ThemedText>
+          </View>
+          <Pressable
+            disabled={isRibbonReviewing}
+            onPress={reviewLogsWithRibbon}
+            style={[
+              styles.reminderButton,
+              { borderColor: accent.primary },
+              preferences.geminiApiKey.trim() && { backgroundColor: accent.primary },
+              isRibbonReviewing && styles.disabledButton,
+            ]}>
+            {isRibbonReviewing ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <ThemedText
+                style={[
+                  styles.reminderButtonText,
+                  { color: preferences.geminiApiKey.trim() ? '#ffffff' : accent.primary },
+                ]}>
+                {text.log.ribbonReview}
+              </ThemedText>
+            )}
+          </Pressable>
+          {ribbonReview ? (
+            <ThemedText style={[styles.ribbonReviewText, isDark && styles.mutedDark]}>
+              {isRibbonReviewing ? text.log.ribbonReviewing : ribbonReview}
+            </ThemedText>
+          ) : null}
+        </GlassView>
+
         <GlassView style={[styles.summaryPanel, isDark && styles.panelDark]}>
           <View style={styles.summaryCopy}>
             <ThemedText type="subtitle">{text.log.streakTitle(streak)}</ThemedText>
@@ -210,6 +337,72 @@ export default function DailyLogScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
+              <ThemedText type="defaultSemiBold">{text.log.profileDetails}</ThemedText>
+              <View style={styles.grid}>
+                <Field
+                  isDark={isDark}
+                  label={text.onboarding.age}
+                  onChangeText={(value) => update('age', value)}
+                  placeholder="0"
+                  suffix={text.onboarding.years}
+                  value={draft.age}
+                />
+                <Field
+                  isDark={isDark}
+                  label={text.onboarding.height}
+                  onChangeText={(value) => update('heightCm', value)}
+                  placeholder="0"
+                  suffix={language === 'secret' ? 'mrrrow' : 'cm'}
+                  value={draft.heightCm}
+                />
+                <Field
+                  isDark={isDark}
+                  label={text.onboarding.weight}
+                  onChangeText={(value) => update('weightKg', value)}
+                  placeholder="0"
+                  suffix={language === 'secret' ? 'purr' : 'kg'}
+                  value={draft.weightKg}
+                />
+              </View>
+              <OptionGroup
+                isDark={isDark}
+                label={text.onboarding.activity}
+                onChange={(value) => update('activityLevel', value)}
+                options={[
+                  ['low', text.onboarding.low],
+                  ['moderate', text.onboarding.moderate],
+                  ['high', text.onboarding.high],
+                ]}
+                value={draft.activityLevel}
+              />
+              <OptionGroup
+                isDark={isDark}
+                label={text.onboarding.sugaryDrinks}
+                onChange={(value) => update('sugaryDrinks', value)}
+                options={[
+                  ['rarely', text.onboarding.rarely],
+                  ['sometimes', text.onboarding.sometimes],
+                  ['often', text.onboarding.often],
+                ]}
+                value={draft.sugaryDrinks}
+              />
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: draft.familyHistory }}
+                onPress={() => update('familyHistory', !draft.familyHistory)}
+                style={[
+                  styles.checkboxRow,
+                  isDark && styles.checkboxRowDark,
+                  draft.familyHistory && styles.checkboxRowActive,
+                  draft.familyHistory && isDark && styles.checkboxRowActiveDark,
+                ]}>
+                <View style={[styles.checkbox, draft.familyHistory && styles.checkboxActive]}>
+                  {draft.familyHistory ? <Feather color="#ffffff" name="check" size={15} /> : null}
+                </View>
+                <ThemedText type="defaultSemiBold">{text.onboarding.familyHistory}</ThemedText>
+              </Pressable>
+
+              <ThemedText type="defaultSemiBold">{text.log.habitsTitle}</ThemedText>
               <View style={styles.grid}>
                 <Field
                   isDark={isDark}
@@ -326,6 +519,50 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
   );
 }
 
+function PredictionPanel({
+  isDark,
+  prediction,
+  profile,
+}: {
+  isDark: boolean;
+  prediction: DiabetesPrediction | null;
+  profile: DiabetesProfile | null;
+}) {
+  const { language, text } = useI18n();
+
+  return (
+    <GlassView style={[styles.predictionPanel, isDark && styles.panelDark]}>
+      {profile && prediction ? (
+        <>
+          <View style={styles.resultTop}>
+            <View>
+              <ThemedText type="subtitle">{text.log.riskTitle}</ThemedText>
+              <ThemedText style={[styles.muted, isDark && styles.mutedDark]}>
+                {text.predict.bmi} {prediction.bmi}
+              </ThemedText>
+            </View>
+            <View style={[styles.scorePill, riskStyle(prediction.riskLevel)]}>
+              <ThemedText style={styles.scoreText}>{text.predict.riskLevels[prediction.riskLevel]}</ThemedText>
+            </View>
+          </View>
+
+          <View style={[styles.scoreTrack, isDark && styles.scoreTrackDark]}>
+            <View style={[styles.scoreFill, { width: `${prediction.score}%` }]} />
+          </View>
+          <ThemedText>{translatePredictionSummary(prediction, language)}</ThemedText>
+        </>
+      ) : (
+        <>
+          <ThemedText type="subtitle">{text.log.riskTitle}</ThemedText>
+          <ThemedText style={[styles.subtitle, isDark && styles.mutedDark]}>
+            {text.predict.enterValid}
+          </ThemedText>
+        </>
+      )}
+    </GlassView>
+  );
+}
+
 function Field({
   isDark,
   label,
@@ -394,6 +631,47 @@ function Counter({
   );
 }
 
+function OptionGroup<T extends string>({
+  isDark,
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  isDark: boolean;
+  label: string;
+  onChange: (value: T) => void;
+  options: [T, string][];
+  value: T;
+}) {
+  return (
+    <View style={styles.optionGroup}>
+      <ThemedText type="defaultSemiBold">{label}</ThemedText>
+      <View style={[styles.segmented, isDark && styles.segmentedDark]}>
+        {options.map(([optionValue, optionLabel]) => {
+          const selected = value === optionValue;
+
+          return (
+            <Pressable
+              key={optionValue}
+              onPress={() => onChange(optionValue)}
+              style={[styles.segment, selected && { backgroundColor: BrandColors.primary }]}>
+              <ThemedText
+                style={[
+                  styles.segmentText,
+                  isDark && styles.segmentTextDark,
+                  selected && styles.segmentTextActive,
+                ]}>
+                {optionLabel}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function formatDate(date: string, language: 'en' | 'ar' | 'es' | 'secret') {
   if (language === 'secret') {
     return date;
@@ -424,6 +702,133 @@ function formatReminderTime(time: ReminderTime, language: 'en' | 'ar' | 'es' | '
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function withProfileDefaults(log: DailyLog, profile: DiabetesProfile | null): DailyLog {
+  if (!profile) {
+    return log;
+  }
+
+  return {
+    ...log,
+    age: log.age || String(profile.age),
+    activityLevel: log.activityLevel || profile.activityLevel,
+    familyHistory: log.familyHistory || profile.familyHistory,
+    glucoseMgDl: log.glucoseMgDl || (typeof profile.glucoseMgDl === 'number' ? String(profile.glucoseMgDl) : ''),
+    heightCm: log.heightCm || String(profile.heightCm),
+    sugaryDrinks: log.sugaryDrinks || profile.sugaryDrinks,
+    weightKg: log.weightKg || String(profile.weightKg),
+  };
+}
+
+function getLatestProfile(entries: DailyLogEntry[], fallbackProfile: DiabetesProfile | null) {
+  for (const entry of entries) {
+    const profile = parseProfileFromLog(entry.log);
+
+    if (profile) {
+      return profile;
+    }
+  }
+
+  return fallbackProfile;
+}
+
+function parseProfileFromLog(log: DailyLog): DiabetesProfile | null {
+  const glucose = Number(log.glucoseMgDl);
+  const profile: DiabetesProfile = {
+    age: Number(log.age),
+    activityLevel: log.activityLevel,
+    canMeasureGlucose: Boolean(log.glucoseMgDl),
+    familyHistory: log.familyHistory,
+    glucoseMgDl: log.glucoseMgDl && Number.isFinite(glucose) && glucose > 0 ? glucose : undefined,
+    heightCm: Number(log.heightCm),
+    sugaryDrinks: log.sugaryDrinks,
+    weightKg: Number(log.weightKg),
+  };
+  const requiredNumbers = [profile.age, profile.heightCm, profile.weightKg];
+
+  return requiredNumbers.every((value) => Number.isFinite(value) && value > 0) ? profile : null;
+}
+
+function analyzeLogTrends(entries: DailyLogEntry[]) {
+  const chronological = [...entries].reverse();
+  const trends = [
+    describeNumericTrend(chronological, 'glucoseMgDl', 'Glucose', 'mg/dL'),
+    describeNumericTrend(chronological, 'weightKg', 'Weight', 'kg'),
+    describeNumericTrend(chronological, 'activityMinutes', 'Activity', 'min'),
+    describeNumericTrend(chronological, 'sleepHours', 'Sleep', 'h'),
+    describeCountTrend(chronological, 'waterCups', 'Water'),
+    describeCountTrend(chronological, 'balancedMeals', 'Balanced meals'),
+  ].filter((trend): trend is string => Boolean(trend));
+
+  return trends.slice(0, 4);
+}
+
+function describeNumericTrend(
+  entries: DailyLogEntry[],
+  key: 'activityMinutes' | 'glucoseMgDl' | 'sleepHours' | 'weightKg',
+  label: string,
+  suffix: string
+) {
+  const values = entries
+    .map((entry) => Number(entry.log[key]))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (values.length < 2) {
+    return null;
+  }
+
+  return describeTrend(label, values[0], values.at(-1)!, suffix);
+}
+
+function describeCountTrend(
+  entries: DailyLogEntry[],
+  key: 'balancedMeals' | 'waterCups',
+  label: string
+) {
+  const values = entries
+    .map((entry) => Number(entry.log[key]))
+    .filter((value) => Number.isFinite(value));
+
+  if (values.length < 2) {
+    return null;
+  }
+
+  return describeTrend(label, values[0], values.at(-1)!, '');
+}
+
+function describeTrend(label: string, first: number, latest: number, suffix: string) {
+  const delta = Math.round((latest - first) * 10) / 10;
+  const unit = suffix ? ` ${suffix}` : '';
+
+  if (Math.abs(delta) < 0.5) {
+    return `${label} is steady across logged entries.`;
+  }
+
+  return `${label} is ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)}${unit} from earliest to latest log.`;
+}
+
+function riskStyle(riskLevel: DiabetesPrediction['riskLevel']) {
+  if (riskLevel === 'High') {
+    return styles.highRisk;
+  }
+
+  if (riskLevel === 'Moderate') {
+    return styles.moderateRisk;
+  }
+
+  return styles.lowRisk;
+}
+
+function translatePredictionSummary(
+  prediction: DiabetesPrediction,
+  language: 'en' | 'ar' | 'es' | 'secret'
+) {
+  if (language === 'secret') {
+    return `hiss? ${prediction.score}/100.`;
+  }
+
+  return prediction.summary;
 }
 
 const styles = StyleSheet.create({
@@ -464,6 +869,75 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
     minWidth: 180,
+  },
+  predictionPanel: {
+    backgroundColor: 'rgba(238, 247, 244, 0.62)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 14,
+    padding: 18,
+  },
+  resultTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  muted: {
+    color: BrandColors.lightMutedText,
+  },
+  scorePill: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  scoreText: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  lowRisk: {
+    backgroundColor: BrandColors.primary,
+  },
+  moderateRisk: {
+    backgroundColor: '#f28c18',
+  },
+  highRisk: {
+    backgroundColor: '#d23b3b',
+  },
+  scoreTrack: {
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    borderRadius: 999,
+    height: 10,
+    overflow: 'hidden',
+  },
+  scoreTrackDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+  },
+  scoreFill: {
+    backgroundColor: BrandColors.primary,
+    height: '100%',
+  },
+  trendList: {
+    gap: 8,
+  },
+  trendRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  trendDot: {
+    borderRadius: 4,
+    height: 8,
+    marginTop: 8,
+    width: 8,
+  },
+  trendText: {
+    flex: 1,
+  },
+  ribbonReviewText: {
+    color: BrandColors.lightInputText,
+    flexBasis: '100%',
+    lineHeight: 22,
   },
   reminderButton: {
     alignItems: 'center',
@@ -700,6 +1174,39 @@ const styles = StyleSheet.create({
   },
   optionGroup: {
     gap: 8,
+  },
+  checkboxRow: {
+    alignItems: 'center',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 48,
+    paddingHorizontal: 12,
+  },
+  checkboxRowDark: {
+    borderColor: BrandColors.darkBorder,
+  },
+  checkboxRowActive: {
+    backgroundColor: BrandColors.primarySoft,
+    borderColor: BrandColors.primary,
+  },
+  checkboxRowActiveDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+  },
+  checkbox: {
+    alignItems: 'center',
+    borderColor: '#7caed3',
+    borderRadius: 7,
+    borderWidth: 2,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  checkboxActive: {
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
   },
   segmented: {
     backgroundColor: BrandColors.primarySoft,
