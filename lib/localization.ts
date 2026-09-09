@@ -71,7 +71,7 @@ const en = {
     appTagline: 'the diabetes prevention app.',
     startDiabeto: 'Start Diabeto',
     welcomeSubtitle:
-      'A diabetes prevention assistant that estimates risk and gives practical habit advice from simple health details.',
+      'Diabeto helps you understand diabetes risk, track daily habits, and get practical guidance from your health details. You can sign in to sync your data or continue as a guest and set things up later.',
     welcomeItems: [
       'Quick lifestyle-based risk estimate',
       'Personal advice from your details',
@@ -347,7 +347,7 @@ const es: typeof en = {
     appTagline: 'la app de prevención de diabetes.',
     startDiabeto: 'Empezar Diabeto',
     welcomeSubtitle:
-      'Un asistente de prevención de diabetes que estima el riesgo y da consejos prácticos de hábitos a partir de datos de salud simples.',
+      'Diabeto te ayuda a entender el riesgo de diabetes, registrar hábitos diarios y recibir orientación práctica a partir de tus datos de salud. Puedes iniciar sesión para sincronizar tus datos o continuar como invitado y configurarlo después.',
     welcomeItems: [
       'Estimación rápida del riesgo basada en estilo de vida',
       'Consejos personales según tus datos',
@@ -616,7 +616,7 @@ const secret: typeof en = {
     welcomePrefix: 'mrrp',
     appTagline: 'hiss? purr app.',
     startDiabeto: 'Diabeto meow',
-    welcomeSubtitle: 'meow purr hiss? mrrp mew.',
+    welcomeSubtitle: 'Diabeto mew hiss? purr. mrrp mew meow purr. prrr mew or purr now.',
     welcomeItems: ['hiss? mew', 'purr meow', 'mrrp meow'],
     beforeStart: 'mrrp mew',
     termsTitle: 'hiss purr',
@@ -878,7 +878,7 @@ const ar: typeof en = {
     appTagline: 'تطبيق الوقاية من السكري.',
     startDiabeto: 'ابدأ Diabeto',
     welcomeSubtitle:
-      'مساعد للوقاية من السكري يقدر مستوى الخطورة ويقدم نصائح عادات عملية من بيانات صحية بسيطة.',
+      'يساعدك Diabeto على فهم خطر السكري، وتتبع العادات اليومية، والحصول على إرشادات عملية من بياناتك الصحية. يمكنك تسجيل الدخول لمزامنة بياناتك أو المتابعة كضيف وإعداد الحساب لاحقا.',
     welcomeItems: [
       'تقدير سريع للخطورة بناء على نمط الحياة',
       'نصائح شخصية من بياناتك',
