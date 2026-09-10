@@ -21,7 +21,7 @@ const appJson = JSON.parse(fs.readFileSync(path.join(root, "app.json"), "utf8"))
 const expoConfig = appJson.expo || {};
 const buildNumber =
   process.env.DIABETO_BUILD_NUMBER || expoConfig.ios?.buildNumber || "1";
-const version = process.env.DIABETO_VERSION || expoConfig.version || "1.0.1";
+const version = process.env.DIABETO_VERSION || expoConfig.version || "1.1";
 const locationPermission =
   expoConfig.ios?.infoPlist?.NSLocationWhenInUseUsageDescription ||
   "Diabeto uses your location to show nearby hospitals and clinician offices when you ask Ribbon for care options.";
