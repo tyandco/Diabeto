@@ -22,6 +22,9 @@ const expoConfig = appJson.expo || {};
 const buildNumber =
   process.env.DIABETO_BUILD_NUMBER || expoConfig.ios?.buildNumber || "1";
 const version = process.env.DIABETO_VERSION || expoConfig.version || "1.0.1";
+const locationPermission =
+  expoConfig.ios?.infoPlist?.NSLocationWhenInUseUsageDescription ||
+  "Diabeto uses your location to show nearby hospitals and clinician offices when you ask Ribbon for care options.";
 
 if (!fs.existsSync(appPath)) {
   console.error(`Missing app bundle: ${appPath}`);
@@ -80,6 +83,8 @@ plistBuddy(
   `Set :CFBundleShortVersionString ${version}`,
 );
 plistBuddyOptional(
+  `Delete :NSLocationWhenInUseUsageDescription`,
+  `Add :NSLocationWhenInUseUsageDescription string ${locationPermission}`,
   "Delete :CFBundleURLTypes:0:CFBundleURLSchemes",
   "Add :CFBundleURLTypes:0:CFBundleURLSchemes array",
   "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string diabeto",

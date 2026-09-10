@@ -19,16 +19,34 @@ type NearbyCareResponse = {
   places?: NearbyCarePlace[];
 };
 
-export async function findNearbyCare() {
-  const permission = await Location.requestForegroundPermissionsAsync();
+const LOCATION_ERROR =
+  'Location is needed to find nearby hospitals and clinicians. Turn on location access for Diabeto and try again.';
 
-  if (!permission.granted) {
-    throw new Error('Location permission is needed to find nearby hospitals and clinicians.');
+export async function findNearbyCare() {
+  const isLocationAvailable = await Location.hasServicesEnabledAsync().catch(() => false);
+
+  if (!isLocationAvailable) {
+    throw new Error(LOCATION_ERROR);
   }
 
-  const location = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
+  const permission = await Location.requestForegroundPermissionsAsync().catch(() => null);
+
+  if (!permission?.granted) {
+    throw new Error(LOCATION_ERROR);
+  }
+
+  const location =
+    (await Location.getLastKnownPositionAsync({
+      maxAge: 5 * 60 * 1000,
+      requiredAccuracy: 5000,
+    }).catch(() => null)) ??
+    (await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Low,
+    }).catch(() => null));
+
+  if (!location) {
+    throw new Error('Could not read your current location. Check iOS Location Services and try again.');
+  }
 
   const response = await fetch(getNearbyCareUrl(), {
     body: JSON.stringify({

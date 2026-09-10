@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tyandco.diabeto",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Diabeto uses your location to show nearby hospitals and clinician offices when you ask Ribbon for care options."
+      }
     },
     "android": {
       "adaptiveIcon": {
