@@ -48,7 +48,6 @@ type GeminiRequest = {
   contents: GeminiContent[];
   generationConfig: {
     maxOutputTokens: number;
-    temperature: number;
   };
 };
 
@@ -67,7 +66,7 @@ When helpful, refer to yourself as Ribbon in first person, but do not overdo it.
 Keep replies clear and under 120 words unless the user asks for a full meal plan.
 `;
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 export async function POST(request: Request) {
   try {
@@ -179,7 +178,6 @@ function buildGeminiRequest(messages: ClientMessage[], healthContext: string | n
     contents,
     generationConfig: {
       maxOutputTokens: 260,
-      temperature: 0.7,
     },
   };
 }
