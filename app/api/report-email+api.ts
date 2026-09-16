@@ -144,7 +144,7 @@ function getReportFromEmail() {
     return '';
   }
 
-  return `Diabeto <reports@${domain}>`;
+  return `Diabeto <diabeto@${domain}>`;
 }
 
 function checkRateLimit(request: Request) {
