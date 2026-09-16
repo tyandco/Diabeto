@@ -1,6 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as MailComposer from 'expo-mail-composer';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -611,7 +610,7 @@ function PredictionPanel({
     return result.uri;
   };
 
-  const downloadWebReport = async () => {
+  const createWebReportPdfBytes = () => {
     if (!profile || !prediction) {
       throw new Error(text.predict.enterValid);
     }
@@ -668,8 +667,11 @@ function PredictionPanel({
       drawPdfText(commands, line, margin + 12, y - 18 - index * 13, 10, false, [95, 117, 111]);
     });
 
-    const bytes = createSimplePdf(commands.join('\n'));
-    downloadPdfBytes(bytes, 'diabeto-risk-report.pdf');
+    return createSimplePdf(commands.join('\n'));
+  };
+
+  const downloadWebReport = async () => {
+    downloadPdfBytes(createWebReportPdfBytes(), 'diabeto-risk-report.pdf');
   };
 
   const exportReport = async () => {
@@ -842,31 +844,27 @@ function PredictionPanel({
     setReportMessage('');
 
     try {
-      if (Platform.OS === 'web') {
-        await downloadWebReport();
-        openWebEmailDraft(recipient, text.predict.reportSubject, text.predict.emailBody);
-        setIsEmailModalOpen(false);
-        setReportMessage(text.predict.webEmailReady);
-        return;
-      }
-
-      const canEmail = await MailComposer.isAvailableAsync();
-
-      if (!canEmail) {
-        setReportMessage(text.predict.emailUnavailable);
-        return;
-      }
-
-      const uri = await createReportPdf();
-
-      await MailComposer.composeAsync({
-        attachments: [uri],
-        body: text.predict.emailBody,
-        recipients: [recipient],
-        subject: text.predict.reportSubject,
+      const response = await fetch(getReportEmailUrl(), {
+        body: JSON.stringify({
+          body: text.predict.emailBody,
+          fileName: 'diabeto-risk-report.pdf',
+          pdfBase64: bytesToBase64(createWebReportPdfBytes()),
+          recipient,
+          subject: text.predict.reportSubject,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
       });
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? text.predict.reportFailed);
+      }
+
       setIsEmailModalOpen(false);
-      setReportMessage(text.predict.reportReady);
+      setReportMessage(text.predict.emailSent);
     } catch (error) {
       setReportMessage(error instanceof Error ? error.message : text.predict.reportFailed);
     } finally {
@@ -1291,16 +1289,50 @@ function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-function openWebEmailDraft(recipient: string, subject: string, body: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getReportEmailUrl() {
+  if (Platform.OS === 'web') {
+    return '/api/report-email';
+  }
+
+  const siteUrl = process.env.EXPO_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!siteUrl) {
+    throw new Error('Add EXPO_PUBLIC_SITE_URL to email reports from the installed app.');
+  }
+
+  return `${siteUrl.replace(/\/$/, '')}/api/report-email`;
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+  let index = 0;
+
+  for (; index + 2 < bytes.length; index += 3) {
+    output += chars[bytes[index] >> 2];
+    output += chars[((bytes[index] & 3) << 4) | (bytes[index + 1] >> 4)];
+    output += chars[((bytes[index + 1] & 15) << 2) | (bytes[index + 2] >> 6)];
+    output += chars[bytes[index + 2] & 63];
+  }
+
+  if (index < bytes.length) {
+    output += chars[bytes[index] >> 2];
+
+    if (index + 1 < bytes.length) {
+      output += chars[((bytes[index] & 3) << 4) | (bytes[index + 1] >> 4)];
+      output += chars[(bytes[index + 1] & 15) << 2];
+      output += '=';
+    } else {
+      output += chars[(bytes[index] & 3) << 4];
+      output += '==';
+    }
+  }
+
+  return output;
 }
 
 function Field({
