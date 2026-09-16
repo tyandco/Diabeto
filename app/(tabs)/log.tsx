@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MailComposer from 'expo-mail-composer';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import type { PDFFont } from 'pdf-lib';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -617,112 +616,59 @@ function PredictionPanel({
       throw new Error(text.predict.enterValid);
     }
 
-    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-    const doc = await PDFDocument.create();
-    const page = doc.addPage([612, 792]);
-    const regularFont = await doc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
     const margin = 42;
-    const pageWidth = page.getWidth();
+    const pageWidth = 612;
     const contentWidth = pageWidth - margin * 2;
-    const darkText = rgb(20 / 255, 48 / 255, 44 / 255);
-    const mutedText = rgb(95 / 255, 117 / 255, 111 / 255);
+    const commands: string[] = [];
     let y = 792 - margin;
 
-    page.drawText('DIABETO', {
-      x: margin,
-      y,
-      size: 12,
-      font: boldFont,
-      color: rgb(15 / 255, 159 / 255, 154 / 255),
-    });
+    drawPdfText(commands, 'DIABETO', margin, y, 12, true, [15, 159, 154]);
     y -= 30;
 
-    page.drawText(text.predict.reportTitle, { x: margin, y, size: 26, font: boldFont, color: darkText });
+    drawPdfText(commands, text.predict.reportTitle, margin, y, 26, true, [20, 48, 44]);
     y -= 20;
 
-    page.drawText(`${text.predict.generatedOn} ${new Date().toLocaleString()}`, {
-      x: margin,
-      y,
-      size: 10,
-      font: regularFont,
-      color: mutedText,
-    });
+    drawPdfText(commands, `${text.predict.generatedOn} ${new Date().toLocaleString()}`, margin, y, 10, false, [95, 117, 111]);
     y -= 24;
 
-    page.drawLine({
-      start: { x: margin, y },
-      end: { x: pageWidth - margin, y },
-      thickness: 2,
-      color: rgb(15 / 255, 159 / 255, 154 / 255),
-    });
+    drawPdfLine(commands, margin, y, pageWidth - margin, y, [15, 159, 154], 2);
     y -= 56;
 
-    page.drawRectangle({
-      x: margin,
-      y,
-      width: 132,
-      height: 42,
-      color: rgb(...riskReportColorComponents(prediction.riskLevel)),
-    });
-    page.drawText(`${text.predict.riskLevels[prediction.riskLevel]} ${prediction.score}/100`, {
-      x: margin + 16,
-      y: y + 15,
-      size: 14,
-      font: boldFont,
-      color: rgb(1, 1, 1),
-    });
+    drawPdfRect(commands, margin, y, 132, 42, riskReportRgb255(prediction.riskLevel));
+    drawPdfText(
+      commands,
+      `${text.predict.riskLevels[prediction.riskLevel]} ${prediction.score}/100`,
+      margin + 16,
+      y + 15,
+      14,
+      true,
+      [255, 255, 255]
+    );
     y -= 42;
 
-    page.drawRectangle({
-      x: margin,
-      y: y - 72,
-      width: contentWidth,
-      height: 72,
-      color: rgb(237 / 255, 248 / 255, 246 / 255),
-      borderColor: rgb(184 / 255, 226 / 255, 221 / 255),
-      borderWidth: 1,
-    });
-    wrapPdfText(translatePredictionSummary(prediction, language), regularFont, 12, contentWidth - 28).forEach((line, index) => {
-      page.drawText(line, {
-        x: margin + 14,
-        y: y - 24 - index * 16,
-        size: 12,
-        font: regularFont,
-        color: darkText,
-      });
+    drawPdfRect(commands, margin, y - 72, contentWidth, 72, [237, 248, 246], [184, 226, 221]);
+    wrapPdfText(translatePredictionSummary(prediction, language), 12, contentWidth - 28).forEach((line, index) => {
+      drawPdfText(commands, line, margin + 14, y - 24 - index * 16, 12, false, [20, 48, 44]);
     });
     y -= 104;
 
-    page.drawText(text.predict.reportDetails, { x: margin, y, size: 16, font: boldFont, color: darkText });
+    drawPdfText(commands, text.predict.reportDetails, margin, y, 16, true, [20, 48, 44]);
     y -= 24;
 
     const rows = getReportRows(profile, prediction, text);
     rows.forEach(([label, value]) => {
-      page.drawText(label, { x: margin, y, size: 11, font: boldFont, color: mutedText });
-      page.drawText(value, { x: margin + 210, y, size: 11, font: regularFont, color: darkText });
+      drawPdfText(commands, label, margin, y, 11, true, [95, 117, 111]);
+      drawPdfText(commands, value, margin + 210, y, 11, false, [20, 48, 44]);
       y -= 24;
     });
 
     y -= 22;
-    page.drawRectangle({
-      x: margin,
-      y: y - 48,
-      width: contentWidth,
-      height: 48,
-      color: rgb(247 / 255, 247 / 255, 243 / 255),
-    });
-    wrapPdfText(text.predict.reportDisclaimer, regularFont, 10, contentWidth - 24).forEach((line, index) => {
-      page.drawText(line, {
-        x: margin + 12,
-        y: y - 18 - index * 13,
-        size: 10,
-        font: regularFont,
-        color: mutedText,
-      });
+    drawPdfRect(commands, margin, y - 48, contentWidth, 48, [247, 247, 243]);
+    wrapPdfText(text.predict.reportDisclaimer, 10, contentWidth - 24).forEach((line, index) => {
+      drawPdfText(commands, line, margin + 12, y - 18 - index * 13, 10, false, [95, 117, 111]);
     });
 
-    const bytes = await doc.save();
+    const bytes = createSimplePdf(commands.join('\n'));
     downloadPdfBytes(bytes, 'diabeto-risk-report.pdf');
   };
 
@@ -896,6 +842,14 @@ function PredictionPanel({
     setReportMessage('');
 
     try {
+      if (Platform.OS === 'web') {
+        await downloadWebReport();
+        openWebEmailDraft(recipient, text.predict.reportSubject, text.predict.emailBody);
+        setIsEmailModalOpen(false);
+        setReportMessage(text.predict.webEmailReady);
+        return;
+      }
+
       const canEmail = await MailComposer.isAvailableAsync();
 
       if (!canEmail) {
@@ -1183,26 +1137,28 @@ function riskReportColor(riskLevel: DiabetesPrediction['riskLevel']) {
   return '#0f9f9a';
 }
 
-function riskReportColorComponents(riskLevel: DiabetesPrediction['riskLevel']): [number, number, number] {
+function riskReportRgb255(riskLevel: DiabetesPrediction['riskLevel']): [number, number, number] {
   if (riskLevel === 'High') {
-    return [210 / 255, 59 / 255, 59 / 255];
+    return [210, 59, 59];
   }
 
   if (riskLevel === 'Moderate') {
-    return [242 / 255, 140 / 255, 24 / 255];
+    return [242, 140, 24];
   }
 
-  return [15 / 255, 159 / 255, 154 / 255];
+  return [15, 159, 154];
 }
 
-function wrapPdfText(text: string, font: PDFFont, size: number, maxWidth: number) {
+function wrapPdfText(text: string, size: number, maxWidth: number) {
   const lines: string[] = [];
   let currentLine = '';
+  const averageCharWidth = size * 0.54;
+  const maxChars = Math.max(20, Math.floor(maxWidth / averageCharWidth));
 
   text.split(/\s+/).forEach((word) => {
     const nextLine = currentLine ? `${currentLine} ${word}` : word;
 
-    if (font.widthOfTextAtSize(nextLine, size) <= maxWidth) {
+    if (nextLine.length <= maxChars) {
       currentLine = nextLine;
       return;
     }
@@ -1221,6 +1177,102 @@ function wrapPdfText(text: string, font: PDFFont, size: number, maxWidth: number
   return lines;
 }
 
+function drawPdfText(
+  commands: string[],
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  bold: boolean,
+  color: [number, number, number]
+) {
+  commands.push(
+    'BT',
+    `${pdfColor(color)} rg`,
+    `/${bold ? 'F2' : 'F1'} ${size} Tf`,
+    `${x} ${y} Td`,
+    `(${escapePdfText(toPdfSafeText(text))}) Tj`,
+    'ET'
+  );
+}
+
+function drawPdfLine(
+  commands: string[],
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: [number, number, number],
+  width: number
+) {
+  commands.push(`${pdfColor(color)} RG`, `${width} w`, `${x1} ${y1} m`, `${x2} ${y2} l`, 'S');
+}
+
+function drawPdfRect(
+  commands: string[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fill: [number, number, number],
+  stroke?: [number, number, number]
+) {
+  commands.push(`${pdfColor(fill)} rg`);
+
+  if (stroke) {
+    commands.push(`${pdfColor(stroke)} RG`, `${x} ${y} ${width} ${height} re`, 'B');
+    return;
+  }
+
+  commands.push(`${x} ${y} ${width} ${height} re`, 'f');
+}
+
+function createSimplePdf(pageCommands: string) {
+  const stream = `${pageCommands}\n`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}endstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  const bytes = new Uint8Array(pdf.length);
+
+  for (let index = 0; index < pdf.length; index += 1) {
+    bytes[index] = pdf.charCodeAt(index) & 0xff;
+  }
+
+  return bytes;
+}
+
+function pdfColor([red, green, blue]: [number, number, number]) {
+  return `${red / 255} ${green / 255} ${blue / 255}`;
+}
+
+function escapePdfText(text: string) {
+  return text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function toPdfSafeText(text: string) {
+  return text.replace(/[^\x20-\x7e]/g, '-');
+}
+
 function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
@@ -1237,6 +1289,14 @@ function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function openWebEmailDraft(recipient: string, subject: string, body: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function isValidEmail(email: string) {
