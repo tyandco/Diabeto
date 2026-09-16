@@ -65,6 +65,7 @@ export default function PredictScreen() {
     () => (profile && prediction ? translateAdvice(profile, prediction.riskLevel, language) : []),
     [language, prediction, profile]
   );
+  const canCreateReport = Boolean(profile && prediction);
 
   useEffect(() => {
     loadHealthContext()
@@ -133,6 +134,11 @@ export default function PredictScreen() {
   };
 
   const exportReport = async () => {
+    if (!canCreateReport) {
+      setReportMessage(text.predict.enterValid);
+      return;
+    }
+
     setIsReportBusy(true);
     setReportMessage('');
 
@@ -160,6 +166,11 @@ export default function PredictScreen() {
 
   const emailReport = async () => {
     const recipient = reportEmail.trim();
+
+    if (!canCreateReport) {
+      setReportMessage(text.predict.enterValid);
+      return;
+    }
 
     if (!isValidEmail(recipient)) {
       setReportMessage(text.predict.invalidEmail);
@@ -294,6 +305,58 @@ export default function PredictScreen() {
           </Pressable>
         </GlassView>
 
+        <View style={[styles.reportBox, isDark && styles.reportBoxDark]}>
+          <View style={styles.reportCopy}>
+            <ThemedText type="defaultSemiBold">{text.predict.reportTitle}</ThemedText>
+            <ThemedText style={[styles.reportHint, isDark && styles.mutedDark]}>
+              {text.predict.reportDisclaimer}
+            </ThemedText>
+          </View>
+          <View style={styles.reportActions}>
+            <Pressable
+              disabled={!canCreateReport || isReportBusy}
+              onPress={exportReport}
+              style={[
+                styles.reportButton,
+                { borderColor: BrandColors.primary },
+                (!canCreateReport || isReportBusy) && styles.disabledReportButton,
+              ]}>
+              {isReportBusy && canCreateReport ? (
+                <ActivityIndicator color={BrandColors.primary} />
+              ) : (
+                <IconSymbol color={BrandColors.primary} name="square.and.arrow.up" size={16} />
+              )}
+              <ThemedText style={[styles.reportButtonText, { color: BrandColors.primary }]}>
+                {text.predict.exportPdf}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              disabled={!canCreateReport || isReportBusy}
+              onPress={() => {
+                if (!canCreateReport) {
+                  setReportMessage(text.predict.enterValid);
+                  return;
+                }
+
+                setReportMessage('');
+                setIsEmailModalOpen(true);
+              }}
+              style={[
+                styles.reportButton,
+                styles.reportButtonPrimary,
+                (!canCreateReport || isReportBusy) && styles.disabledReportButton,
+              ]}>
+              <IconSymbol color="#ffffff" name="envelope.fill" size={16} />
+              <ThemedText style={styles.reportButtonPrimaryText}>{text.predict.emailReport}</ThemedText>
+            </Pressable>
+          </View>
+          {reportMessage || !canCreateReport ? (
+            <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
+              {reportMessage || text.predict.enterValid}
+            </ThemedText>
+          ) : null}
+        </View>
+
         <GlassView style={[styles.resultPanel, isDark && styles.panelDark]}>
           {profile && prediction ? (
             <>
@@ -322,45 +385,6 @@ export default function PredictScreen() {
                     <ThemedText style={styles.adviceText}>{item}</ThemedText>
                   </View>
                 ))}
-              </View>
-
-              <View style={[styles.reportBox, isDark && styles.reportBoxDark]}>
-                <View style={styles.reportCopy}>
-                  <ThemedText type="defaultSemiBold">{text.predict.reportTitle}</ThemedText>
-                  <ThemedText style={[styles.reportHint, isDark && styles.mutedDark]}>
-                    {text.predict.reportDisclaimer}
-                  </ThemedText>
-                </View>
-                <View style={styles.reportActions}>
-                  <Pressable
-                    disabled={isReportBusy}
-                    onPress={exportReport}
-                    style={[styles.reportButton, { borderColor: BrandColors.primary }]}>
-                    {isReportBusy ? (
-                      <ActivityIndicator color={BrandColors.primary} />
-                    ) : (
-                      <IconSymbol color={BrandColors.primary} name="square.and.arrow.up" size={16} />
-                    )}
-                    <ThemedText style={[styles.reportButtonText, { color: BrandColors.primary }]}>
-                      {text.predict.exportPdf}
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable
-                    disabled={isReportBusy}
-                    onPress={() => {
-                      setReportMessage('');
-                      setIsEmailModalOpen(true);
-                    }}
-                    style={[styles.reportButton, styles.reportButtonPrimary]}>
-                    <IconSymbol color="#ffffff" name="envelope.fill" size={16} />
-                    <ThemedText style={styles.reportButtonPrimaryText}>{text.predict.emailReport}</ThemedText>
-                  </Pressable>
-                </View>
-                {reportMessage ? (
-                  <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
-                    {reportMessage}
-                  </ThemedText>
-                ) : null}
               </View>
             </>
           ) : (
@@ -1099,6 +1123,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '900',
+  },
+  disabledReportButton: {
+    opacity: 0.45,
   },
   reportMessage: {
     color: BrandColors.lightMutedText,
