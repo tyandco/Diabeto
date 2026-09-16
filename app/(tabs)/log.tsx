@@ -1,4 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MailComposer from 'expo-mail-composer';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -6,6 +7,7 @@ import type { PDFFont } from 'pdf-lib';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { MarkdownText } from '@/components/markdown-text';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BrandColors, Fonts, Layout } from '@/constants/theme';
@@ -34,6 +36,8 @@ import {
 } from '@/lib/log-reminders';
 import { useI18n } from '@/lib/localization';
 import { sendDiabetoChat, type ChatMessage } from '@/lib/diabeto-chatbot';
+
+const RIBBON_TIPS_CACHE_KEY = 'diabeto.ribbon-risk-tips.v1';
 
 export default function DailyLogScreen() {
   const accent = useAccentPalette();
@@ -212,7 +216,7 @@ export default function DailyLogScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.historyContent}>
-        <PredictionPanel isDark={isDark} prediction={prediction} profile={latestProfile} />
+        <PredictionPanel entries={entries} isDark={isDark} prediction={prediction} profile={latestProfile} />
 
         <View style={[styles.summaryPanel, isDark && styles.panelDark]}>
           <View style={styles.summaryCopy}>
@@ -567,10 +571,12 @@ function HistoryCard({ entry, isDark }: { entry: DailyLogEntry; isDark: boolean 
 }
 
 function PredictionPanel({
+  entries,
   isDark,
   prediction,
   profile,
 }: {
+  entries: DailyLogEntry[];
   isDark: boolean;
   prediction: DiabetesPrediction | null;
   profile: DiabetesProfile | null;
@@ -583,6 +589,10 @@ function PredictionPanel({
   const [recommendations, setRecommendations] = useState('');
   const [reportEmail, setReportEmail] = useState('');
   const [reportMessage, setReportMessage] = useState('');
+  const tipsSignature = useMemo(
+    () => (profile && prediction ? createRibbonTipsSignature(profile, prediction, entries, language) : ''),
+    [entries, language, prediction, profile]
+  );
 
   const createReportPdf = async () => {
     if (!profile || !prediction) {
@@ -753,7 +763,7 @@ function PredictionPanel({
     }
   };
 
-  const generateRecommendations = async () => {
+  const generateRecommendations = useCallback(async (signature = tipsSignature) => {
     if (!profile || !prediction) {
       setRecommendations(text.predict.enterValid);
       return;
@@ -765,7 +775,6 @@ function PredictionPanel({
     }
 
     setIsRecommendationsLoading(true);
-    setRecommendations('');
 
     try {
       const messages: ChatMessage[] = [
@@ -774,7 +783,9 @@ function PredictionPanel({
           role: 'user',
           text: [
             'Create personalized diabetes-prevention tips from my current Diabeto risk prediction.',
-            'Give exactly 4 concise bullets.',
+            'Return exactly 4 markdown bullet points and nothing else.',
+            'Do not include a greeting, intro sentence, signoff, encouragement line, or "you got this".',
+            'Start each bullet with a bold label, for example **Food:**.',
             'Cover food, activity, glucose or weight tracking, and the next habit to focus on.',
             'Do not diagnose or prescribe medication.',
           ].join(' '),
@@ -784,18 +795,89 @@ function PredictionPanel({
         messages,
         formatHealthContext({ profile, prediction }),
         preferences.ribbonTone,
-        null,
+        formatDailyLogHistoryForAI(entries),
         preferences.geminiApiKey,
         language
       );
+      const cleanedReply = cleanRibbonTips(reply) || reply.trim();
 
-      setRecommendations(reply);
+      setRecommendations(cleanedReply);
+      await AsyncStorage.setItem(
+        RIBBON_TIPS_CACHE_KEY,
+        JSON.stringify({ signature, tips: cleanedReply })
+      );
     } catch (error) {
       setRecommendations(error instanceof Error ? error.message : text.predict.recommendationsFailed);
     } finally {
       setIsRecommendationsLoading(false);
     }
-  };
+  }, [
+    entries,
+    language,
+    prediction,
+    preferences.geminiApiKey,
+    preferences.ribbonTone,
+    profile,
+    text.predict.enterValid,
+    text.predict.recommendationsFailed,
+    text.predict.recommendationsNeedKey,
+    tipsSignature,
+  ]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!profile || !prediction || !tipsSignature) {
+      setRecommendations('');
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    AsyncStorage.getItem(RIBBON_TIPS_CACHE_KEY)
+      .then((value) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const cached = parseRibbonTipsCache(value);
+
+        if (cached?.signature === tipsSignature) {
+          setRecommendations(cached.tips);
+          return;
+        }
+
+        if (!preferences.geminiApiKey.trim()) {
+          setRecommendations(text.predict.recommendationsNeedKey);
+          return;
+        }
+
+        generateRecommendations(tipsSignature);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!preferences.geminiApiKey.trim()) {
+          setRecommendations(text.predict.recommendationsNeedKey);
+          return;
+        }
+
+        generateRecommendations(tipsSignature);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    generateRecommendations,
+    prediction,
+    preferences.geminiApiKey,
+    profile,
+    text.predict.recommendationsNeedKey,
+    tipsSignature,
+  ]);
 
   const emailReport = async () => {
     const recipient = reportEmail.trim();
@@ -896,19 +978,16 @@ function PredictionPanel({
                   : text.predict.recommendationsNeedKey}
               </ThemedText>
             </View>
-            <Pressable
-              disabled={isRecommendationsLoading}
-              onPress={generateRecommendations}
-              style={[styles.recommendationsButton, isRecommendationsLoading && styles.disabledButton]}>
-              {isRecommendationsLoading ? <ActivityIndicator color="#ffffff" /> : <Feather color="#ffffff" name="zap" size={16} />}
-              <ThemedText style={styles.reportButtonPrimaryText}>
-                {isRecommendationsLoading ? text.predict.recommendationsLoading : text.predict.generateRecommendations}
-              </ThemedText>
-            </Pressable>
+            {isRecommendationsLoading ? (
+              <View style={styles.recommendationsLoadingRow}>
+                <ActivityIndicator color={BrandColors.primary} />
+                <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
+                  {text.predict.recommendationsLoading}
+                </ThemedText>
+              </View>
+            ) : null}
             {recommendations ? (
-              <ThemedText style={[styles.recommendationsText, isDark && styles.mutedDark]}>
-                {recommendations}
-              </ThemedText>
+              <MarkdownText isDark={isDark} style={[styles.recommendationsText, isDark && styles.mutedDark]} text={recommendations} />
             ) : null}
           </View>
 
@@ -1314,6 +1393,71 @@ function formatReminderTime(time: ReminderTime, language: 'en' | 'ar' | 'es' | '
   });
 }
 
+function createRibbonTipsSignature(
+  profile: DiabetesProfile,
+  prediction: DiabetesPrediction,
+  entries: DailyLogEntry[],
+  language: 'en' | 'ar' | 'es' | 'secret'
+) {
+  return JSON.stringify({
+    activityLevel: profile.activityLevel,
+    age: profile.age,
+    bmi: prediction.bmi,
+    canMeasureGlucose: profile.canMeasureGlucose,
+    familyHistory: profile.familyHistory,
+    glucoseMgDl: profile.glucoseMgDl ?? null,
+    heightCm: profile.heightCm,
+    language,
+    riskLevel: prediction.riskLevel,
+    score: prediction.score,
+    sugaryDrinks: profile.sugaryDrinks,
+    weightKg: profile.weightKg,
+    recentLogs: entries.slice(0, 7).map((entry) => ({
+      activityMinutes: entry.log.activityMinutes,
+      balancedMeals: entry.log.balancedMeals,
+      date: entry.date,
+      glucoseMgDl: entry.log.glucoseMgDl,
+      mood: entry.log.mood,
+      sleepHours: entry.log.sleepHours,
+      waterCups: entry.log.waterCups,
+      weightKg: entry.log.weightKg,
+    })),
+  });
+}
+
+function parseRibbonTipsCache(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as { signature?: unknown; tips?: unknown };
+
+    if (typeof parsed.signature === 'string' && typeof parsed.tips === 'string') {
+      return { signature: parsed.signature, tips: parsed.tips };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function cleanRibbonTips(reply: string) {
+  const lines = reply
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const firstBulletIndex = lines.findIndex((line) => /^[-*]\s+/.test(line));
+  const bulletLines = firstBulletIndex >= 0 ? lines.slice(firstBulletIndex) : lines;
+  const withoutSignoff = bulletLines.filter(
+    (line) => !/^(you('|’)ve got this!?|you got this!?|hope this helps!?|let('|’)s keep|hello|hi\b)/i.test(line)
+  );
+
+  return withoutSignoff.join('\n').trim();
+}
+
 function withProfileDefaults(log: DailyLog, profile: DiabetesProfile | null): DailyLog {
   if (!profile) {
     return log;
@@ -1585,6 +1729,11 @@ const styles = StyleSheet.create({
   recommendationsText: {
     color: BrandColors.lightInputText,
     lineHeight: 22,
+  },
+  recommendationsLoadingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   trendList: {
     gap: 8,
