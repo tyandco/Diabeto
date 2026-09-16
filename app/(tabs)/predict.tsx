@@ -1,5 +1,10 @@
+import * as MailComposer from 'expo-mail-composer';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +18,7 @@ import { GlassView } from '@/components/glass-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BrandColors, Fonts, Layout } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { predictDiabetesRisk, type DiabetesProfile } from '@/lib/diabetes-advisor';
+import { predictDiabetesRisk, type DiabetesPrediction, type DiabetesProfile } from '@/lib/diabetes-advisor';
 import { loadHealthContext, saveHealthContext, setHealthContext } from '@/lib/health-context';
 import { useI18n } from '@/lib/localization';
 
@@ -45,9 +50,21 @@ export default function PredictScreen() {
   const { language, text } = useI18n();
   const [form, setForm] = useState<FormState>(initialForm);
   const [hasLoadedSavedProfile, setHasLoadedSavedProfile] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isReportBusy, setIsReportBusy] = useState(false);
+  const [reportEmail, setReportEmail] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
 
   const profile = useMemo(() => parseProfile(form), [form]);
   const prediction = useMemo(() => (profile ? predictDiabetesRisk(profile) : null), [profile]);
+  const reportSummary = useMemo(
+    () => (prediction ? translateSummary(prediction.riskLevel, prediction.score, language) : ''),
+    [language, prediction]
+  );
+  const reportAdvice = useMemo(
+    () => (profile && prediction ? translateAdvice(profile, prediction.riskLevel, language) : []),
+    [language, prediction, profile]
+  );
 
   useEffect(() => {
     loadHealthContext()
@@ -87,6 +104,94 @@ export default function PredictScreen() {
 
   const update = <Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const createReportPdf = async () => {
+    if (!profile || !prediction) {
+      throw new Error(text.predict.enterValid);
+    }
+
+    const html = buildPredictionReportHtml({
+      advice: reportAdvice,
+      language,
+      prediction,
+      profile,
+      summary: reportSummary,
+      text,
+    });
+    const result = await Print.printToFileAsync({
+      html,
+      margins: {
+        bottom: 36,
+        left: 36,
+        right: 36,
+        top: 36,
+      },
+    });
+
+    return result.uri;
+  };
+
+  const exportReport = async () => {
+    setIsReportBusy(true);
+    setReportMessage('');
+
+    try {
+      const uri = await createReportPdf();
+      const canShare = await Sharing.isAvailableAsync();
+
+      if (!canShare) {
+        setReportMessage(text.predict.reportUnavailable);
+        return;
+      }
+
+      await Sharing.shareAsync(uri, {
+        dialogTitle: text.predict.reportTitle,
+        mimeType: 'application/pdf',
+        UTI: 'com.adobe.pdf',
+      });
+      setReportMessage(text.predict.reportReady);
+    } catch (error) {
+      setReportMessage(error instanceof Error ? error.message : text.predict.reportFailed);
+    } finally {
+      setIsReportBusy(false);
+    }
+  };
+
+  const emailReport = async () => {
+    const recipient = reportEmail.trim();
+
+    if (!isValidEmail(recipient)) {
+      setReportMessage(text.predict.invalidEmail);
+      return;
+    }
+
+    setIsReportBusy(true);
+    setReportMessage('');
+
+    try {
+      const canEmail = await MailComposer.isAvailableAsync();
+
+      if (!canEmail) {
+        setReportMessage(text.predict.emailUnavailable);
+        return;
+      }
+
+      const uri = await createReportPdf();
+
+      await MailComposer.composeAsync({
+        attachments: [uri],
+        body: text.predict.emailBody,
+        recipients: [recipient],
+        subject: text.predict.reportSubject,
+      });
+      setIsEmailModalOpen(false);
+      setReportMessage(text.predict.reportReady);
+    } catch (error) {
+      setReportMessage(error instanceof Error ? error.message : text.predict.reportFailed);
+    } finally {
+      setIsReportBusy(false);
+    }
   };
 
   return (
@@ -207,16 +312,55 @@ export default function PredictScreen() {
               <View style={[styles.scoreTrack, isDark && styles.scoreTrackDark]}>
                 <View style={[styles.scoreFill, { width: `${prediction.score}%` }]} />
               </View>
-              <ThemedText>{translateSummary(prediction.riskLevel, prediction.score, language)}</ThemedText>
+              <ThemedText>{reportSummary}</ThemedText>
 
               <View style={styles.adviceList}>
                 <ThemedText type="defaultSemiBold">{text.predict.personalAdvice}</ThemedText>
-                {translateAdvice(profile, prediction.riskLevel, language).map((item) => (
+                {reportAdvice.map((item) => (
                   <View key={item} style={styles.adviceItem}>
                     <View style={styles.bullet} />
                     <ThemedText style={styles.adviceText}>{item}</ThemedText>
                   </View>
                 ))}
+              </View>
+
+              <View style={[styles.reportBox, isDark && styles.reportBoxDark]}>
+                <View style={styles.reportCopy}>
+                  <ThemedText type="defaultSemiBold">{text.predict.reportTitle}</ThemedText>
+                  <ThemedText style={[styles.reportHint, isDark && styles.mutedDark]}>
+                    {text.predict.reportDisclaimer}
+                  </ThemedText>
+                </View>
+                <View style={styles.reportActions}>
+                  <Pressable
+                    disabled={isReportBusy}
+                    onPress={exportReport}
+                    style={[styles.reportButton, { borderColor: BrandColors.primary }]}>
+                    {isReportBusy ? (
+                      <ActivityIndicator color={BrandColors.primary} />
+                    ) : (
+                      <IconSymbol color={BrandColors.primary} name="square.and.arrow.up" size={16} />
+                    )}
+                    <ThemedText style={[styles.reportButtonText, { color: BrandColors.primary }]}>
+                      {text.predict.exportPdf}
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    disabled={isReportBusy}
+                    onPress={() => {
+                      setReportMessage('');
+                      setIsEmailModalOpen(true);
+                    }}
+                    style={[styles.reportButton, styles.reportButtonPrimary]}>
+                    <IconSymbol color="#ffffff" name="envelope.fill" size={16} />
+                    <ThemedText style={styles.reportButtonPrimaryText}>{text.predict.emailReport}</ThemedText>
+                  </Pressable>
+                </View>
+                {reportMessage ? (
+                  <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
+                    {reportMessage}
+                  </ThemedText>
+                ) : null}
               </View>
             </>
           ) : (
@@ -228,6 +372,45 @@ export default function PredictScreen() {
           {text.predict.disclaimer}
         </ThemedText>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsEmailModalOpen(false)}
+        transparent
+        visible={isEmailModalOpen}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.emailModal, isDark && styles.emailModalDark]}>
+            <View style={styles.emailModalTop}>
+              <ThemedText type="subtitle">{text.predict.emailTitle}</ThemedText>
+              <Pressable onPress={() => setIsEmailModalOpen(false)} style={styles.closeButton}>
+                <ThemedText style={[styles.closeText, isDark && styles.mutedDark]}>×</ThemedText>
+              </Pressable>
+            </View>
+            <TextInput
+              autoCapitalize="none"
+              autoComplete="email"
+              inputMode="email"
+              onChangeText={setReportEmail}
+              placeholder={text.predict.emailPlaceholder}
+              placeholderTextColor={isDark ? '#8faec5' : '#7890a1'}
+              style={[styles.emailInput, isDark && styles.inputDark, isDark && styles.emailInputDark]}
+              value={reportEmail}
+            />
+            {reportMessage ? (
+              <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
+                {reportMessage}
+              </ThemedText>
+            ) : null}
+            <Pressable
+              disabled={isReportBusy}
+              onPress={emailReport}
+              style={[styles.emailSendButton, isReportBusy && styles.disabledButton]}>
+              {isReportBusy ? <ActivityIndicator color="#ffffff" /> : null}
+              <ThemedText style={styles.emailSendText}>{text.predict.sendEmail}</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -301,6 +484,175 @@ function OptionGroup<T extends string | boolean>({
       </View>
     </View>
   );
+}
+
+function buildPredictionReportHtml({
+  advice,
+  language,
+  prediction,
+  profile,
+  summary,
+  text,
+}: {
+  advice: string[];
+  language: 'en' | 'ar' | 'es' | 'secret';
+  prediction: DiabetesPrediction;
+  profile: DiabetesProfile;
+  summary: string;
+  text: ReturnType<typeof useI18n>['text'];
+}) {
+  const generatedAt = new Date().toLocaleString(language === 'secret' ? 'en' : language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const isRtl = language === 'ar';
+  const details = [
+    [text.onboarding.age, `${profile.age} ${text.onboarding.years}`],
+    [text.onboarding.height, `${profile.heightCm} cm`],
+    [text.onboarding.weight, `${profile.weightKg} kg`],
+    [text.predict.bmi, String(prediction.bmi)],
+    [text.onboarding.glucose, typeof profile.glucoseMgDl === 'number' ? `${profile.glucoseMgDl} mg/dL` : text.common.optional],
+  ];
+  const factors = [
+    [text.onboarding.activity, text.onboarding[profile.activityLevel]],
+    [text.onboarding.sugaryDrinks, text.onboarding[profile.sugaryDrinks]],
+    [text.onboarding.familyHistory, profile.familyHistory ? text.common.yes : text.common.no],
+  ];
+
+  return `<!DOCTYPE html>
+<html dir="${isRtl ? 'rtl' : 'ltr'}" lang="${language === 'secret' ? 'en' : language}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      @page { margin: 34px; }
+      * { box-sizing: border-box; }
+      body {
+        color: #18311f;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        line-height: 1.45;
+        margin: 0;
+      }
+      .header {
+        border-bottom: 3px solid #0b948d;
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 18px;
+      }
+      .brand { color: #0b948d; font-size: 13px; font-weight: 800; text-transform: uppercase; }
+      h1 { font-size: 34px; line-height: 1.05; margin: 5px 0 8px; }
+      .muted { color: #63746d; font-size: 12px; }
+      .score {
+        background: ${riskReportColor(prediction.riskLevel)};
+        border-radius: 18px;
+        color: white;
+        min-width: 142px;
+        padding: 14px 16px;
+        text-align: center;
+      }
+      .score strong { display: block; font-size: 30px; line-height: 1; }
+      .score span { font-size: 12px; font-weight: 800; text-transform: uppercase; }
+      .summary {
+        background: #eef8f6;
+        border: 1px solid #cce9e4;
+        border-radius: 14px;
+        margin: 20px 0;
+        padding: 16px;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr 1fr;
+        margin: 18px 0;
+      }
+      .card {
+        border: 1px solid #d9e5df;
+        border-radius: 14px;
+        padding: 15px;
+      }
+      h2 { font-size: 17px; margin: 0 0 12px; }
+      .row {
+        border-top: 1px solid #edf2ef;
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 8px 0;
+      }
+      .row:first-of-type { border-top: 0; }
+      .label { color: #63746d; }
+      .value { font-weight: 800; text-align: ${isRtl ? 'left' : 'right'}; }
+      ul { margin: 0; padding-${isRtl ? 'right' : 'left'}: 20px; }
+      li { margin: 8px 0; }
+      .disclaimer {
+        border-top: 1px solid #d9e5df;
+        color: #63746d;
+        font-size: 11px;
+        margin-top: 22px;
+        padding-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="header">
+      <div>
+        <div class="brand">Diabeto</div>
+        <h1>${escapeHtml(text.predict.reportTitle)}</h1>
+        <div class="muted">${escapeHtml(text.predict.generatedOn)} ${escapeHtml(generatedAt)}</div>
+      </div>
+      <div class="score">
+        <span>${escapeHtml(text.predict.riskLevels[prediction.riskLevel])}</span>
+        <strong>${prediction.score}</strong>
+        <span>/ 100</span>
+      </div>
+    </section>
+    <section class="summary">${escapeHtml(summary)}</section>
+    <section class="grid">
+      <div class="card">
+        <h2>${escapeHtml(text.predict.reportDetails)}</h2>
+        ${details.map(([label, value]) => reportRow(label, value)).join('')}
+      </div>
+      <div class="card">
+        <h2>${escapeHtml(text.predict.riskFactors)}</h2>
+        ${factors.map(([label, value]) => reportRow(label, value)).join('')}
+      </div>
+    </section>
+    <section class="card">
+      <h2>${escapeHtml(text.predict.personalAdvice)}</h2>
+      <ul>${advice.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+    </section>
+    <p class="disclaimer">${escapeHtml(text.predict.reportDisclaimer)}</p>
+  </body>
+</html>`;
+}
+
+function reportRow(label: string, value: string) {
+  return `<div class="row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value)}</span></div>`;
+}
+
+function escapeHtml(value: string | number) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function riskReportColor(riskLevel: DiabetesPrediction['riskLevel']) {
+  if (riskLevel === 'High') {
+    return '#d23b3b';
+  }
+
+  if (riskLevel === 'Moderate') {
+    return '#f28c18';
+  }
+
+  return '#0b948d';
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function parseProfile(form: FormState): DiabetesProfile | null {
@@ -699,6 +1051,125 @@ const styles = StyleSheet.create({
   },
   adviceText: {
     flex: 1,
+  },
+  reportBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  reportBoxDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
+  },
+  reportCopy: {
+    gap: 4,
+  },
+  reportHint: {
+    color: BrandColors.lightMutedText,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  reportActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  reportButton: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+  reportButtonPrimary: {
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
+  },
+  reportButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  reportButtonPrimaryText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  reportMessage: {
+    color: BrandColors.lightMutedText,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5, 18, 24, 0.52)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emailModal: {
+    backgroundColor: BrandColors.lightBackground,
+    borderRadius: 20,
+    gap: 14,
+    maxWidth: 460,
+    padding: 18,
+    width: '100%',
+  },
+  emailModalDark: {
+    backgroundColor: BrandColors.darkSurface,
+  },
+  emailModalTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  closeButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  closeText: {
+    color: BrandColors.lightMutedText,
+    fontSize: 26,
+    lineHeight: 28,
+  },
+  emailInput: {
+    backgroundColor: '#ffffff',
+    borderColor: BrandColors.lightBorder,
+    borderRadius: 14,
+    borderWidth: 1,
+    color: BrandColors.lightInputText,
+    fontFamily: Fonts.display,
+    fontSize: 16,
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  emailInputDark: {
+    backgroundColor: BrandColors.darkBackground,
+    borderColor: BrandColors.darkBorder,
+  },
+  emailSendButton: {
+    alignItems: 'center',
+    backgroundColor: BrandColors.primary,
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  emailSendText: {
+    color: '#ffffff',
+    fontWeight: '900',
   },
   disclaimer: {
     color: BrandColors.lightMutedText,

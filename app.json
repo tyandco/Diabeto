@@ -65,7 +65,8 @@
           "defaultChannel": "daily-log-reminders"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-mail-composer"
     ],
     "experiments": {
       "typedRoutes": false,

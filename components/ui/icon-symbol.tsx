@@ -20,6 +20,8 @@ const MAPPING = {
   'gearshape.fill': 'settings',
   'lightbulb.fill': 'lightbulb',
   'paperplane.fill': 'send',
+  'envelope.fill': 'email',
+  'square.and.arrow.up': 'ios-share',
   paperclip: 'attach-file',
   'location.fill': 'location-on',
   'chart.bar.fill': 'bar-chart',
