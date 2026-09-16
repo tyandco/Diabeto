@@ -2,8 +2,9 @@ import Feather from '@expo/vector-icons/Feather';
 import * as MailComposer from 'expo-mail-composer';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import type { PDFFont } from 'pdf-lib';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -574,9 +575,12 @@ function PredictionPanel({
   prediction: DiabetesPrediction | null;
   profile: DiabetesProfile | null;
 }) {
+  const preferences = useAppPreferences();
   const { language, text } = useI18n();
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(false);
   const [isReportBusy, setIsReportBusy] = useState(false);
+  const [recommendations, setRecommendations] = useState('');
   const [reportEmail, setReportEmail] = useState('');
   const [reportMessage, setReportMessage] = useState('');
 
@@ -598,6 +602,120 @@ function PredictionPanel({
     return result.uri;
   };
 
+  const downloadWebReport = async () => {
+    if (!profile || !prediction) {
+      throw new Error(text.predict.enterValid);
+    }
+
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const regularFont = await doc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+    const margin = 42;
+    const pageWidth = page.getWidth();
+    const contentWidth = pageWidth - margin * 2;
+    const darkText = rgb(20 / 255, 48 / 255, 44 / 255);
+    const mutedText = rgb(95 / 255, 117 / 255, 111 / 255);
+    let y = 792 - margin;
+
+    page.drawText('DIABETO', {
+      x: margin,
+      y,
+      size: 12,
+      font: boldFont,
+      color: rgb(15 / 255, 159 / 255, 154 / 255),
+    });
+    y -= 30;
+
+    page.drawText(text.predict.reportTitle, { x: margin, y, size: 26, font: boldFont, color: darkText });
+    y -= 20;
+
+    page.drawText(`${text.predict.generatedOn} ${new Date().toLocaleString()}`, {
+      x: margin,
+      y,
+      size: 10,
+      font: regularFont,
+      color: mutedText,
+    });
+    y -= 24;
+
+    page.drawLine({
+      start: { x: margin, y },
+      end: { x: pageWidth - margin, y },
+      thickness: 2,
+      color: rgb(15 / 255, 159 / 255, 154 / 255),
+    });
+    y -= 56;
+
+    page.drawRectangle({
+      x: margin,
+      y,
+      width: 132,
+      height: 42,
+      color: rgb(...riskReportColorComponents(prediction.riskLevel)),
+    });
+    page.drawText(`${text.predict.riskLevels[prediction.riskLevel]} ${prediction.score}/100`, {
+      x: margin + 16,
+      y: y + 15,
+      size: 14,
+      font: boldFont,
+      color: rgb(1, 1, 1),
+    });
+    y -= 42;
+
+    page.drawRectangle({
+      x: margin,
+      y: y - 72,
+      width: contentWidth,
+      height: 72,
+      color: rgb(237 / 255, 248 / 255, 246 / 255),
+      borderColor: rgb(184 / 255, 226 / 255, 221 / 255),
+      borderWidth: 1,
+    });
+    wrapPdfText(translatePredictionSummary(prediction, language), regularFont, 12, contentWidth - 28).forEach((line, index) => {
+      page.drawText(line, {
+        x: margin + 14,
+        y: y - 24 - index * 16,
+        size: 12,
+        font: regularFont,
+        color: darkText,
+      });
+    });
+    y -= 104;
+
+    page.drawText(text.predict.reportDetails, { x: margin, y, size: 16, font: boldFont, color: darkText });
+    y -= 24;
+
+    const rows = getReportRows(profile, prediction, text);
+    rows.forEach(([label, value]) => {
+      page.drawText(label, { x: margin, y, size: 11, font: boldFont, color: mutedText });
+      page.drawText(value, { x: margin + 210, y, size: 11, font: regularFont, color: darkText });
+      y -= 24;
+    });
+
+    y -= 22;
+    page.drawRectangle({
+      x: margin,
+      y: y - 48,
+      width: contentWidth,
+      height: 48,
+      color: rgb(247 / 255, 247 / 255, 243 / 255),
+    });
+    wrapPdfText(text.predict.reportDisclaimer, regularFont, 10, contentWidth - 24).forEach((line, index) => {
+      page.drawText(line, {
+        x: margin + 12,
+        y: y - 18 - index * 13,
+        size: 10,
+        font: regularFont,
+        color: mutedText,
+      });
+    });
+
+    const bytes = await doc.save();
+    downloadPdfBytes(bytes, 'diabeto-risk-report.pdf');
+  };
+
   const exportReport = async () => {
     if (!profile || !prediction) {
       setReportMessage(text.predict.enterValid);
@@ -608,6 +726,12 @@ function PredictionPanel({
     setReportMessage('');
 
     try {
+      if (Platform.OS === 'web') {
+        await downloadWebReport();
+        setReportMessage(text.predict.reportReady);
+        return;
+      }
+
       const uri = await createReportPdf();
       const canShare = await Sharing.isAvailableAsync();
 
@@ -626,6 +750,50 @@ function PredictionPanel({
       setReportMessage(error instanceof Error ? error.message : text.predict.reportFailed);
     } finally {
       setIsReportBusy(false);
+    }
+  };
+
+  const generateRecommendations = async () => {
+    if (!profile || !prediction) {
+      setRecommendations(text.predict.enterValid);
+      return;
+    }
+
+    if (!preferences.geminiApiKey.trim()) {
+      setRecommendations(text.predict.recommendationsNeedKey);
+      return;
+    }
+
+    setIsRecommendationsLoading(true);
+    setRecommendations('');
+
+    try {
+      const messages: ChatMessage[] = [
+        {
+          id: `predict-tips-${Date.now()}`,
+          role: 'user',
+          text: [
+            'Create personalized diabetes-prevention tips from my current Diabeto risk prediction.',
+            'Give exactly 4 concise bullets.',
+            'Cover food, activity, glucose or weight tracking, and the next habit to focus on.',
+            'Do not diagnose or prescribe medication.',
+          ].join(' '),
+        },
+      ];
+      const reply = await sendDiabetoChat(
+        messages,
+        formatHealthContext({ profile, prediction }),
+        preferences.ribbonTone,
+        null,
+        preferences.geminiApiKey,
+        language
+      );
+
+      setRecommendations(reply);
+    } catch (error) {
+      setRecommendations(error instanceof Error ? error.message : text.predict.recommendationsFailed);
+    } finally {
+      setIsRecommendationsLoading(false);
     }
   };
 
@@ -719,6 +887,31 @@ function PredictionPanel({
             <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>{reportMessage}</ThemedText>
           ) : null}
 
+          <View style={[styles.recommendationsBox, isDark && styles.recommendationsBoxDark]}>
+            <View style={styles.summaryCopy}>
+              <ThemedText type="defaultSemiBold">{text.predict.recommendationsTitle}</ThemedText>
+              <ThemedText style={[styles.reportMessage, isDark && styles.mutedDark]}>
+                {preferences.geminiApiKey.trim()
+                  ? text.predict.recommendationsBody
+                  : text.predict.recommendationsNeedKey}
+              </ThemedText>
+            </View>
+            <Pressable
+              disabled={isRecommendationsLoading}
+              onPress={generateRecommendations}
+              style={[styles.recommendationsButton, isRecommendationsLoading && styles.disabledButton]}>
+              {isRecommendationsLoading ? <ActivityIndicator color="#ffffff" /> : <Feather color="#ffffff" name="zap" size={16} />}
+              <ThemedText style={styles.reportButtonPrimaryText}>
+                {isRecommendationsLoading ? text.predict.recommendationsLoading : text.predict.generateRecommendations}
+              </ThemedText>
+            </Pressable>
+            {recommendations ? (
+              <ThemedText style={[styles.recommendationsText, isDark && styles.mutedDark]}>
+                {recommendations}
+              </ThemedText>
+            ) : null}
+          </View>
+
           <Modal
             animationType="fade"
             onRequestClose={() => setIsEmailModalOpen(false)}
@@ -781,16 +974,7 @@ function buildLogPredictionReportHtml({
 }) {
   const generatedAt = new Date().toLocaleString();
   const direction = language === 'ar' ? 'rtl' : 'ltr';
-  const rows = [
-    [text.onboarding.age, `${profile.age}`],
-    [text.onboarding.height, `${profile.heightCm} cm`],
-    [text.onboarding.weight, `${profile.weightKg} kg`],
-    [text.predict.bmi, `${prediction.bmi}`],
-    [text.onboarding.glucose, typeof profile.glucoseMgDl === 'number' ? `${profile.glucoseMgDl} mg/dL` : 'N/A'],
-    [text.onboarding.activity, text.onboarding[profile.activityLevel]],
-    [text.onboarding.sugaryDrinks, text.onboarding[profile.sugaryDrinks]],
-    [text.onboarding.familyHistory, profile.familyHistory ? text.common.yes : text.common.no],
-  ];
+  const rows = getReportRows(profile, prediction, text);
 
   return `<!doctype html>
 <html dir="${direction}">
@@ -882,6 +1066,23 @@ function reportRow(label: string, value: string) {
   return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`;
 }
 
+function getReportRows(
+  profile: DiabetesProfile,
+  prediction: DiabetesPrediction,
+  text: ReturnType<typeof useI18n>['text']
+) {
+  return [
+    [text.onboarding.age, `${profile.age}`],
+    [text.onboarding.height, `${profile.heightCm} cm`],
+    [text.onboarding.weight, `${profile.weightKg} kg`],
+    [text.predict.bmi, `${prediction.bmi}`],
+    [text.onboarding.glucose, typeof profile.glucoseMgDl === 'number' ? `${profile.glucoseMgDl} mg/dL` : 'N/A'],
+    [text.onboarding.activity, text.onboarding[profile.activityLevel]],
+    [text.onboarding.sugaryDrinks, text.onboarding[profile.sugaryDrinks]],
+    [text.onboarding.familyHistory, profile.familyHistory ? text.common.yes : text.common.no],
+  ];
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -901,6 +1102,62 @@ function riskReportColor(riskLevel: DiabetesPrediction['riskLevel']) {
   }
 
   return '#0f9f9a';
+}
+
+function riskReportColorComponents(riskLevel: DiabetesPrediction['riskLevel']): [number, number, number] {
+  if (riskLevel === 'High') {
+    return [210 / 255, 59 / 255, 59 / 255];
+  }
+
+  if (riskLevel === 'Moderate') {
+    return [242 / 255, 140 / 255, 24 / 255];
+  }
+
+  return [15 / 255, 159 / 255, 154 / 255];
+}
+
+function wrapPdfText(text: string, font: PDFFont, size: number, maxWidth: number) {
+  const lines: string[] = [];
+  let currentLine = '';
+
+  text.split(/\s+/).forEach((word) => {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (font.widthOfTextAtSize(nextLine, size) <= maxWidth) {
+      currentLine = nextLine;
+      return;
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    currentLine = word;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+function downloadPdfBytes(bytes: Uint8Array, fileName: string) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
+  const pdfBytes = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(pdfBytes).set(bytes);
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function isValidEmail(email: string) {
@@ -1301,6 +1558,33 @@ const styles = StyleSheet.create({
     color: BrandColors.lightMutedText,
     fontSize: 13,
     lineHeight: 18,
+  },
+  recommendationsBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: BrandColors.glassBorder,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
+  },
+  recommendationsBoxDark: {
+    backgroundColor: BrandColors.darkSurfaceStrong,
+    borderColor: BrandColors.darkBorder,
+  },
+  recommendationsButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: BrandColors.primary,
+    borderRadius: 14,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 14,
+  },
+  recommendationsText: {
+    color: BrandColors.lightInputText,
+    lineHeight: 22,
   },
   trendList: {
     gap: 8,
